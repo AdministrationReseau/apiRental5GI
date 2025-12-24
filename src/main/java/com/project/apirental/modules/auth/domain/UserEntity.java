@@ -1,0 +1,39 @@
+package com.project.apirental.modules.auth.domain;
+
+import java.util.UUID;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
+import org.springframework.data.domain.Persistable;
+import org.springframework.data.relational.core.mapping.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@Table("users")
+public class UserEntity implements Persistable<UUID> {
+    @Id
+    private UUID id;
+    private String email;
+    private String password;
+    private String role;
+
+    // Champ technique pour indiquer à R2DBC si c'est un INSERT ou UPDATE
+    @Transient 
+    @Builder.Default
+    @JsonIgnore
+    private boolean isNewRecord = false;
+
+    @Override
+    @Transient
+    public boolean isNew() {
+        // Si isNewRecord est true OU si l'id est null, c'est un INSERT
+        return isNewRecord || id == null;
+    }
+}

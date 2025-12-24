@@ -30,7 +30,7 @@ public class AuthController {
                 .map(ResponseEntity::ok);
     }
 
-    @PostMapping("/register/organization")
+    @PostMapping("/register/organizationOwner")
     public Mono<ResponseEntity<OrganizationEntity>> registerOrganization(@RequestBody OrgRegisterRequest request) {
         return authService.registerOrganization(request)
                 .map(ResponseEntity::ok);

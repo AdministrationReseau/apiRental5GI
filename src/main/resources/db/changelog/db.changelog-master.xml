@@ -51,4 +51,12 @@
         </createTable>
     </changeSet>
 
+    <changeSet id="4" author="brayanne">
+        <addColumn tableName="users">
+            <column name="firstname" type="VARCHAR(255)"/>
+            <column name="lastname" type="VARCHAR(255)"/>
+            <column name="fullname" type="VARCHAR(255)"/>
+        </addColumn>
+    </changeSet>
+
 </databaseChangeLog>

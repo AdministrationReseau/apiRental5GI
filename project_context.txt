@@ -1,5 +1,5 @@
 ﻿# Contexte du Projet : Fleet & Geofence API
-GÃ©nÃ©rÃ© le : 12/26/2025 12:09:16
+GÃ©nÃ©rÃ© le : 12/26/2025 16:02:36
 Framework : Spring Boot WebFlux (Reactive)
 
 ## 1. Arborescence du Projet
@@ -109,6 +109,7 @@ D:.
 ª   ª   ª               ª       ª       SubscriptionRepository.java
 ª   ª   ª               ª       ª       
 ª   ª   ª               ª       +---services
+ª   ª   ª               ª               PaymentService.java
 ª   ª   ª               ª               SubscriptionService.java
 ª   ª   ª               ª               
 ª   ª   ª               +---shared
@@ -122,6 +123,7 @@ D:.
 ª   ª   ª                   ª       GlobalExceptionHandler.java
 ª   ª   ª                   ª       
 ª   ª   ª                   +---security
+ª   ª   ª                   ª       JwtAuthenticationFilter.java
 ª   ª   ª                   ª       JwtUtil.java
 ª   ª   ª                   ª       
 ª   ª   ª                   +---utils
@@ -130,7 +132,6 @@ D:.
 ª   ª   +---resources
 ª   ª       ª   .env.example
 ª   ª       ª   application.properties
-ª   ª       ª   schema.sql
 ª   ª       ª   
 ª   ª       +---db
 ª   ª           +---changelog
@@ -146,7 +147,6 @@ D:.
     +---classes
     ª   ª   .env.example
     ª   ª   application.properties
-    ª   ª   schema.sql
     ª   ª   
     ª   +---com
     ª   ª   +---project
@@ -237,6 +237,7 @@ D:.
     ª   ª           ª       ª       SubscriptionRepository.class
     ª   ª           ª       ª       
     ª   ª           ª       +---services
+    ª   ª           ª               PaymentService.class
     ª   ª           ª               SubscriptionService.class
     ª   ª           ª               
     ª   ª           +---shared
@@ -251,6 +252,7 @@ D:.
     ª   ª               ª       GlobalExceptionHandler.class
     ª   ª               ª       
     ª   ª               +---security
+    ª   ª               ª       JwtAuthenticationFilter.class
     ª   ª               ª       JwtUtil.class
     ª   ª               ª       
     ª   ª               +---utils
@@ -497,9 +499,10 @@ public class OpenApiConfig {
     public GroupedOpenApi orgApi() {
         return GroupedOpenApi.builder()
                 .group("3-organization")
-                .pathsToMatch("/api/org/**")
+                .pathsToMatch("/api/org/**", "/api/subscriptions/**")
                 .build();
     }
+
 }
 
 ---
@@ -507,29 +510,37 @@ public class OpenApiConfig {
 `$ext
 package com.project.apirental.config;
 
+import com.project.apirental.shared.security.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
+import org.springframework.security.config.web.server.SecurityWebFiltersOrder;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.server.SecurityWebFilterChain;
+import org.springframework.security.web.server.authentication.HttpStatusServerEntryPoint;
 
 @Configuration
 @EnableWebFluxSecurity
 public class SecurityConfig {
 
     @Bean
-    public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
+    public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http, JwtAuthenticationFilter jwtFilter) {
         return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(exchanges -> exchanges
                         .pathMatchers("/auth/**", "/swagger-ui.html", "/webjars/**", "/v3/api-docs/**").permitAll()
-                        .pathMatchers("/api/org/**").hasAuthority("ROLE_ORGANIZATION") // Exemple de protection par role
+                        .pathMatchers("/api/org/**").hasRole("ORGANIZATION")
                         .anyExchange().authenticated()
+                )
+                .exceptionHandling(exceptionHandlingSpec -> exceptionHandlingSpec
+                        .authenticationEntryPoint(new HttpStatusServerEntryPoint(HttpStatus.UNAUTHORIZED))
                 )
                 .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
                 .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
+                .addFilterAt(jwtFilter, SecurityWebFiltersOrder.AUTHENTICATION) // Ajout du filtre JWT
                 .build();
     }
 
@@ -624,9 +635,11 @@ public class AuditListener {
                 .isNewRecord(true) // <--- IMPORTANT : Force l'INSERT
                 .build();
 
-        auditRepository.save(audit)
-                .doOnError(e -> log.error("Erreur lors de l'enregistrement de l'audit: {}", e.getMessage()))
-                .subscribe(); // Fire-and-forget
+        if (audit != null) {
+            auditRepository.save(audit)
+                    .doOnError(e -> log.error("Erreur lors de l'enregistrement de l'audit: {}", e.getMessage()))
+                    .subscribe(); // Fire-and-forget
+}
     }
 }
 
@@ -661,6 +674,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
+import org.springframework.http.HttpHeaders;
+import org.springframework.web.server.ServerWebExchange;
 
 @RestController
 @RequestMapping("/auth")
@@ -671,7 +686,21 @@ public class AuthController {
 
     @PostMapping("/login")
     public Mono<ResponseEntity<AuthResponse>> login(@RequestBody LoginRequest request) {
-        return authService.login(request)
+        return authService.login(request).map(ResponseEntity::ok);
+    }
+
+    // RÃ©cupÃ©rer l'utilisateur connectÃ©
+    @GetMapping("/me")
+    public Mono<ResponseEntity<UserEntity>> me() {
+        return authService.getCurrentUser()
+                .map(ResponseEntity::ok);
+    }
+
+    // RafraÃ®chir le token
+    @PostMapping("/refresh")
+    public Mono<ResponseEntity<AuthResponse>> refresh(ServerWebExchange exchange) {
+        String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+        return authService.refreshToken(authHeader)
                 .map(ResponseEntity::ok);
     }
 
@@ -801,7 +830,7 @@ import com.project.apirental.modules.organization.dto.OrgRegisterRequest;
 import com.project.apirental.modules.auth.repository.UserRepository;
 import com.project.apirental.modules.organization.domain.OrganizationEntity;
 import com.project.apirental.modules.organization.repository.OrganizationRepository;
-import com.project.apirental.modules.subscription.services.SubscriptionService; 
+import com.project.apirental.modules.subscription.services.SubscriptionService;
 import com.project.apirental.shared.events.AuditEvent;
 import com.project.apirental.shared.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
@@ -813,6 +842,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 
 @Service
 @RequiredArgsConstructor
@@ -820,6 +850,8 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final OrganizationRepository orgRepository;
+    
+    private final SubscriptionService subscriptionService;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final ApplicationEventPublisher eventPublisher;
@@ -834,6 +866,27 @@ public class AuthService {
                     return new AuthResponse(jwtUtil.generateToken(u.getEmail(), u.getRole()));
                 })
                 .switchIfEmpty(Mono.error(new RuntimeException("Bad credentials")));
+    }
+
+    // Nouvelle mÃ©thode : RÃ©cupÃ©rer l'utilisateur courant via le contexte de sÃ©curitÃ©
+    public Mono<UserEntity> getCurrentUser() {
+        return ReactiveSecurityContextHolder.getContext()
+                .map(ctx -> ctx.getAuthentication().getName())
+                .flatMap(userRepository::findByEmail);
+    }
+
+    // Nouvelle mÃ©thode : Refresh Token
+    public Mono<AuthResponse> refreshToken(String oldToken) {
+        if (oldToken.startsWith("Bearer ")) {
+            oldToken = oldToken.substring(7);
+        }
+
+        if (jwtUtil.validateToken(oldToken)) {
+            String email = jwtUtil.getUsernameFromToken(oldToken);
+            return userRepository.findByEmail(email)
+                    .map(user -> new AuthResponse(jwtUtil.generateToken(user.getEmail(), user.getRole())));
+        }
+        return Mono.error(new RuntimeException("Invalid Token"));
     }
 
     // Inscription Client Simple
@@ -877,18 +930,18 @@ public class AuthService {
                     return userRepository.save(user).flatMap(savedUser -> {
                         // 2. CrÃ©er l'Organisation liÃ©e
                         OrganizationEntity org = OrganizationEntity.builder()
-                                .id(UUID.randomUUID()) // On gÃ©nÃ¨re l'ID aussi pour l'org
+                                .id(UUID.randomUUID())
                                 .name(request.orgName())
                                 .ownerId(savedUser.getId())
                                 .isNewRecord(true) // <--- IMPORTANT : Force l'INSERT
                                 .build();
                         return orgRepository.save(org)
-                              .flatMap(savedOrg -> 
+                                .flatMap(savedOrg -> 
                                     // 3. CrÃ©er la souscription FREE (ChaÃ®nage rÃ©actif)
                                     subscriptionService.initializeDefaultSubscription(savedOrg.getId())
                                         .thenReturn(savedOrg) // On retourne l'organisation pour le flux final
                                 )
-                                .doOnSuccess(o -> eventPublisher.publishEvent(new AuditEvent("REGISTER_ORG", "AUTH", "New Org & Subscription: " + o.getName())));
+                                .doOnSuccess(o -> eventPublisher.publishEvent(new AuditEvent("REGISTER_ORG", "AUTH", "New Org: " + o.getName())));
                     });
                 })).cast(OrganizationEntity.class);
     }
@@ -1070,31 +1123,41 @@ public class OrganizationService {
     private final ApplicationEventPublisher eventPublisher;
 
     public Mono<OrgResponseDTO> getOrganization(UUID id) {
-        return organizationRepository.findById(id)
-                .map(orgMapper::toDto)
-                .switchIfEmpty(Mono.error(new RuntimeException("Organization not found")));
+    if (id == null) {
+        return Mono.error(new IllegalArgumentException("id must not be null"));
+    }
+    return organizationRepository.findById(id)
+            .map(orgMapper::toDto)
+            .switchIfEmpty(Mono.error(new RuntimeException("Organization not found")));
     }
 
     @Transactional
     public Mono<OrgResponseDTO> updateOrganization(UUID id, OrgUpdateDTO request) {
+        if (id == null) {
+             return Mono.error(new IllegalArgumentException("id must not be null"));
+        }
         return organizationRepository.findById(id)
-                .flatMap(org -> {
+            .flatMap(org -> {
+                if (org != null) {
                     // Mise Ã  jour des champs
                     if(request.name() != null) org.setName(request.name());
                     // Ici on pourrait mapper d'autres champs si l'entitÃ© OrganizationEntity avait "description" etc.
 
                     return organizationRepository.save(org)
-                            .doOnSuccess(updatedOrg -> {
-                                // DÃ©clenchement de l'audit asynchrone
-                                eventPublisher.publishEvent(new AuditEvent(
-                                        "UPDATE_ORG",
-                                        "ORGANIZATION",
-                                        "Updated organization: " + updatedOrg.getName()
-                                ));
-                            });
-                })
-                .map(orgMapper::toDto)
-                .switchIfEmpty(Mono.error(new RuntimeException("Organization not found")));
+                        .doOnSuccess(updatedOrg -> {
+                            // DÃ©clenchement de l'audit asynchrone
+                            eventPublisher.publishEvent(new AuditEvent(
+                                "UPDATE_ORG",
+                                "ORGANIZATION",
+                                "Updated organization: " + updatedOrg.getName()
+                            ));
+                        });
+                } else {
+                    return Mono.error(new RuntimeException("Organization not found"));
+                }
+            })
+            .map(orgMapper::toDto)
+            .switchIfEmpty(Mono.error(new RuntimeException("Organization not found")));
     }
 }
 
@@ -1122,7 +1185,7 @@ import java.util.UUID;
 @RequestMapping("/api/subscriptions")
 @RequiredArgsConstructor
 @Tag(name = "Subscription Management")
-@SecurityRequirement(name = "bearerAuth")
+// @SecurityRequirement(name = "bearerAuth")
 public class SubscriptionController {
 
     private final SubscriptionService subscriptionService;
@@ -1304,6 +1367,35 @@ public interface SubscriptionRepository extends R2dbcRepository<SubscriptionEnti
 }
 
 ---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\subscription\services\PaymentService.java
+`$ext
+package com.project.apirental.modules.subscription.services;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
+import java.time.Duration;
+
+@Service
+@Slf4j
+public class PaymentService {
+
+    /**
+     * Simule un appel Ã  une passerelle de paiement (Stripe, etc.)
+     */
+    public Mono<Boolean> processPayment(String email, String planType, double amount) {
+        log.info("ðŸ’³ Simulation du paiement pour {} (Plan: {}, Montant: {}â‚¬)", email, planType, amount);
+        
+        // Simule un dÃ©lai rÃ©seau de 800ms sans bloquer le thread
+        return Mono.delay(Duration.ofMillis(800))
+                .map(d -> {
+                    log.info("âœ… Paiement validÃ© par la passerelle pour {}", email);
+                    return true;
+                });
+    }
+}
+
+---
 ### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\subscription\services\SubscriptionService.java
 `$ext
 package com.project.apirental.modules.subscription.services;
@@ -1311,11 +1403,13 @@ package com.project.apirental.modules.subscription.services;
 import com.project.apirental.modules.subscription.domain.PlanType;
 import com.project.apirental.modules.subscription.domain.SubscriptionEntity;
 import com.project.apirental.modules.subscription.repository.SubscriptionRepository;
+import com.project.apirental.modules.auth.repository.UserRepository;
 import com.project.apirental.shared.events.AuditEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
@@ -1327,11 +1421,10 @@ import java.util.UUID;
 public class SubscriptionService {
 
     private final SubscriptionRepository subscriptionRepository;
+    private final UserRepository userRepository;
+    private final PaymentService paymentService;
     private final ApplicationEventPublisher eventPublisher;
 
-    /**
-     * Initialise un plan FREE par dÃ©faut pour une nouvelle organisation
-     */
     public Mono<SubscriptionEntity> initializeDefaultSubscription(UUID organizationId) {
         SubscriptionEntity subscription = SubscriptionEntity.builder()
                 .id(UUID.randomUUID())
@@ -1339,37 +1432,51 @@ public class SubscriptionService {
                 .planType(PlanType.FREE.name())
                 .status("ACTIVE")
                 .startDate(LocalDateTime.now())
+                .endDate(null) // Plan FREE = Ã€ vie
                 .isNewRecord(true)
                 .build();
 
         return subscriptionRepository.save(subscription)
-                .doOnSuccess(s -> {
-                    log.info("Default FREE subscription created for Org: {}", organizationId);
-                    eventPublisher.publishEvent(new AuditEvent("CREATE_SUBSCRIPTION", "SUBSCRIPTION", "Default FREE plan for org: " + organizationId));
-                });
+                .doOnSuccess(s -> eventPublisher.publishEvent(new AuditEvent("CREATE_SUBSCRIPTION", "SUBSCRIPTION", "Default FREE plan (Lifetime) for org: " + organizationId)));
     }
 
-    /**
-     * Retourne la souscription active pour vÃ©rification des quotas ultÃ©rieure
-     */
     public Mono<SubscriptionEntity> getActiveSubscription(UUID organizationId) {
         return subscriptionRepository.findByOrganizationIdAndStatus(organizationId, "ACTIVE")
-                .switchIfEmpty(Mono.error(new RuntimeException("No active subscription found for this organization")));
+                .switchIfEmpty(Mono.error(new RuntimeException("No active subscription found")));
     }
-    @org.springframework.transaction.annotation.Transactional
+
+    @Transactional
     public Mono<SubscriptionEntity> upgradePlan(UUID organizationId, PlanType newPlan) {
+        // 1. RÃ©cupÃ©rer la souscription actuelle
         return subscriptionRepository.findByOrganizationIdAndStatus(organizationId, "ACTIVE")
                 .flatMap(subscription -> {
-                    subscription.setPlanType(newPlan.name());
-                    // On pourrait ajouter ici une logique de date de fin si le plan est payant
-                    return subscriptionRepository.save(subscription)
-                            .doOnSuccess(s -> eventPublisher.publishEvent(new AuditEvent(
-                                    "UPDATE_PLAN", 
-                                    "SUBSCRIPTION", 
-                                    "Org " + organizationId + " upgraded to " + newPlan
-                            )));
+                    // 2. Si c'est un plan payant, on simule le paiement
+                    if (newPlan == PlanType.PRO || newPlan == PlanType.ENTERPRISE) {
+                        double price = (newPlan == PlanType.PRO) ? 29.99 : 99.99;
+                        
+                        return paymentService.processPayment("owner@system.com", newPlan.name(), price)
+                                .flatMap(paymentSuccess -> {
+                                    if (!paymentSuccess) return Mono.error(new RuntimeException("Payment failed"));
+                                    
+                                    // 3. Mise Ã  jour avec durÃ©e de 30 jours
+                                    subscription.setPlanType(newPlan.name());
+                                    subscription.setStartDate(LocalDateTime.now());
+                                    subscription.setEndDate(LocalDateTime.now().plusDays(30));
+                                    
+                                    return subscriptionRepository.save(subscription);
+                                });
+                    } else {
+                        // Retour au plan FREE
+                        subscription.setPlanType(PlanType.FREE.name());
+                        subscription.setEndDate(null);
+                        return subscriptionRepository.save(subscription);
+                    }
                 })
-                .switchIfEmpty(Mono.error(new RuntimeException("Subscription not found")));
+                .doOnSuccess(s -> eventPublisher.publishEvent(new AuditEvent(
+                        "UPGRADE_PLAN", 
+                        "SUBSCRIPTION", 
+                        "Org " + organizationId + " upgraded to " + newPlan + " until " + s.getEndDate()
+                )));
     }
 }
 
@@ -1450,10 +1557,63 @@ public class GlobalExceptionHandler {
 }
 
 ---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\shared\security\JwtAuthenticationFilter.java
+`$ext
+package com.project.apirental.shared.security;
+
+import org.springframework.http.HttpHeaders;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
+import org.springframework.stereotype.Component;
+import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.server.WebFilter;
+import org.springframework.web.server.WebFilterChain;
+import reactor.core.publisher.Mono;
+
+import java.util.Collections;
+
+@Component
+public class JwtAuthenticationFilter implements WebFilter {
+
+    private final JwtUtil jwtUtil;
+
+    public JwtAuthenticationFilter(JwtUtil jwtUtil) {
+        this.jwtUtil = jwtUtil;
+    }
+
+    @Override
+    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+        String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+
+            if (jwtUtil.validateToken(token)) {
+                String username = jwtUtil.getUsernameFromToken(token);
+                String role = jwtUtil.getRoleFromToken(token);
+
+                // Spring attend souvent ROLE_ avant le nom du rÃ´le pour hasRole()
+                UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+                        username,
+                        null,
+                        Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role))
+                );
+
+                return chain.filter(exchange)
+                        .contextWrite(ReactiveSecurityContextHolder.withAuthentication(auth));
+            }
+        }
+        return chain.filter(exchange);
+    }
+}
+
+---
 ### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\shared\security\JwtUtil.java
 `$ext
 package com.project.apirental.shared.security;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
@@ -1462,6 +1622,7 @@ import org.springframework.stereotype.Component;
 import java.security.Key;
 import java.util.Date;
 import java.util.Base64;
+import java.util.function.Function;
 
 @Component
 public class JwtUtil {
@@ -1488,7 +1649,24 @@ public class JwtUtil {
     }
 
     public String getUsernameFromToken(String token) {
-        return Jwts.parserBuilder().setSigningKey(getSignKey()).build().parseClaimsJws(token).getBody().getSubject();
+        return extractClaim(token, Claims::getSubject);
+    }
+
+    public String getRoleFromToken(String token) {
+        return extractAllClaims(token).get("role", String.class);
+    }
+
+    public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
+        final Claims claims = extractAllClaims(token);
+        return claimsResolver.apply(claims);
+    }
+
+    private Claims extractAllClaims(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(getSignKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
     }
 
     public boolean validateToken(String token) {
@@ -1554,48 +1732,6 @@ spring.webflux.base-path=/
 # ClÃ© secrÃ¨te (gÃ©nÃ©rez-en une forte pour la prod via la variable JWT_SECRET)
 jwt.secret=${JWT_SECRET:7KyhCtwGUvIoqcxTCabQGm3FJ/F6LfCy9nmOg3hy+WA=}
 jwt.expiration=86400000
-
----
-### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\resources\schema.sql
-`$ext
-w-- Extension nÃ©cessaire pour la gÃ©nÃ©ration automatique des UUID par PostgreSQL
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
-CREATE TABLE IF NOT EXISTS users (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    email VARCHAR(255) UNIQUE NOT NULL,
-    password VARCHAR(255) NOT NULL,
-    role VARCHAR(50) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS organizations (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name VARCHAR(255) NOT NULL,
-    owner_id UUID NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_owner FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS audits (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    action VARCHAR(255),
-    module VARCHAR(255),
-    details TEXT,
-    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- ... (garder le contenu existant) ...
-
-CREATE TABLE IF NOT EXISTS subscriptions (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    organization_id UUID NOT NULL,
-    plan_type VARCHAR(50) NOT NULL, -- 'FREE', 'PRO', 'ENTERPRISE'
-    status VARCHAR(50) NOT NULL,    -- 'ACTIVE', 'EXPIRED'
-    start_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    end_date TIMESTAMP,             -- NULL pour le plan FREE (illimitÃ© dans le temps)
-    CONSTRAINT fk_organization FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
-);
 
 ---
 ### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\test\java\com\project\apirental\ApirentalApplicationTests.java

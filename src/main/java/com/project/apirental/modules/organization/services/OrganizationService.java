@@ -18,35 +18,44 @@ import reactor.core.publisher.Mono;
 @RequiredArgsConstructor
 public class OrganizationService {
 
-    // On réutilise le repository défini dans le module Auth (ou on pourrait le déplacer dans Shared)
     private final OrganizationRepository organizationRepository;
     private final OrgMapper orgMapper;
     private final ApplicationEventPublisher eventPublisher;
 
     public Mono<OrgResponseDTO> getOrganization(UUID id) {
-    if (id == null) {
-        return Mono.error(new IllegalArgumentException("id must not be null"));
-    }
-    return organizationRepository.findById(id)
-            .map(orgMapper::toDto)
-            .switchIfEmpty(Mono.error(new RuntimeException("Organization not found")));
+        if (id == null) {
+            return Mono.error(new IllegalArgumentException("id must not be null"));
+        }
+        return organizationRepository.findById(id)
+                .map(orgMapper::toDto)
+                .switchIfEmpty(Mono.error(new RuntimeException("Organization not found")));
     }
 
     @Transactional
     public Mono<OrgResponseDTO> updateOrganization(UUID id, OrgUpdateDTO request) {
         if (id == null) {
-             return Mono.error(new IllegalArgumentException("id must not be null"));
+            return Mono.error(new IllegalArgumentException("id must not be null"));
         }
         return organizationRepository.findById(id)
             .flatMap(org -> {
-                if (org != null) {
-                    // Mise à jour des champs
-                    if(request.name() != null) org.setName(request.name());
-                    // Ici on pourrait mapper d'autres champs si l'entité OrganizationEntity avait "description" etc.
+                // Mapping manuel (ou via MapStruct si configuré plus tard)
+                if(request.name() != null) org.setName(request.name());
+                if(request.description() != null) org.setDescription(request.description());
+                if(request.address() != null) org.setAddress(request.address());
+                if(request.city() != null) org.setCity(request.city());
+                if(request.postalCode() != null) org.setPostalCode(request.postalCode());
+                if(request.region() != null) org.setRegion(request.region());
+                if(request.phone() != null) org.setPhone(request.phone());
+                if(request.email() != null) org.setEmail(request.email());
+                if(request.website() != null) org.setWebsite(request.website());
+                if(request.timezone() != null) org.setTimezone(request.timezone());
+                if(request.logoUrl() != null) org.setLogoUrl(request.logoUrl());
+                if(request.registrationNumber() != null) org.setRegistrationNumber(request.registrationNumber());
+                if(request.taxNumber() != null) org.setTaxNumber(request.taxNumber());
 
+                if (org != null) {
                     return organizationRepository.save(org)
                         .doOnSuccess(updatedOrg -> {
-                            // Déclenchement de l'audit asynchrone
                             eventPublisher.publishEvent(new AuditEvent(
                                 "UPDATE_ORG",
                                 "ORGANIZATION",
@@ -54,7 +63,7 @@ public class OrganizationService {
                             ));
                         });
                 } else {
-                    return Mono.error(new RuntimeException("Organization not found"));
+                    return Mono.error(new IllegalArgumentException("org must not be null"));
                 }
             })
             .map(orgMapper::toDto)

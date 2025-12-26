@@ -59,26 +59,36 @@
         </addColumn>
     </changeSet>
 
-    <!--  Changement pour les souscriptions -->
-    <changeSet id="4" author="senior-pair-programmer">
-        <createTable tableName="subscriptions">
-            <column name="id" type="UUID" defaultValueComputed="uuid_generate_v4()">
-                <constraints primaryKey="true" nullable="false"/>
-            </column>
-            <column name="organization_id" type="UUID">
-                <constraints nullable="false" foreignKeyName="fk_subscription_org" referencedTableName="organizations" referencedColumnNames="id" deleteCascade="true"/>
-            </column>
-            <column name="plan_type" type="VARCHAR(50)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="status" type="VARCHAR(50)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="start_date" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
-                <constraints nullable="false"/>
-            </column>
-            <column name="end_date" type="TIMESTAMP"/>
-        </createTable>
+    <!-- ChangeSet 5: Extension table organizations -->
+    <changeSet id="5" author="brayanne">
+        <addColumn tableName="organizations">
+            <column name="description" type="TEXT"/>
+            <column name="registration_number" type="VARCHAR(100)"/>
+            <column name="tax_number" type="VARCHAR(100)"/>
+            <column name="business_license" type="VARCHAR(500)"/> <!-- URL/Path du fichier -->
+            <column name="address" type="VARCHAR(255)"/>
+            <column name="city" type="VARCHAR(100)"/>
+            <column name="country" type="VARCHAR(50)" defaultValue="CM"/>
+            <column name="postal_code" type="VARCHAR(20)"/>
+            <column name="region" type="VARCHAR(100)"/>
+            <column name="phone" type="VARCHAR(50)"/>
+            <column name="email" type="VARCHAR(255)"/>
+            <column name="website" type="VARCHAR(255)"/>
+            <column name="is_verified" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="verification_date" type="TIMESTAMP"/>
+            <column name="current_agencies" type="INT" defaultValueNumeric="0"/>
+            <column name="current_vehicles" type="INT" defaultValueNumeric="0"/>
+            <column name="current_drivers" type="INT" defaultValueNumeric="0"/>
+            <column name="current_users" type="INT" defaultValueNumeric="0"/>
+            <column name="timezone" type="VARCHAR(50)" defaultValue="Africa/Douala"/>
+            <column name="logo_url" type="VARCHAR(500)"/>
+            <column name="subscription_plan_id" type="UUID"/>
+            <column name="subscription_expires_at" type="TIMESTAMP"/>
+            <column name="subscription_auto_renew" type="BOOLEAN" defaultValueBoolean="true"/>
+            <column name="total_rentals" type="INT" defaultValueNumeric="0"/>
+            <column name="monthly_revenue" type="DOUBLE" defaultValueNumeric="0.0"/>
+            <column name="yearly_revenue" type="DOUBLE" defaultValueNumeric="0.0"/>
+        </addColumn>
     </changeSet>
 
 </databaseChangeLog>

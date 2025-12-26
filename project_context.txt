@@ -1,0 +1,1264 @@
+﻿# Contexte du Projet : Fleet & Geofence API
+GÃ©nÃ©rÃ© le : 12/26/2025 11:15:44
+Framework : Spring Boot WebFlux (Reactive)
+
+## 1. Arborescence du Projet
+
+Structure du dossier pour le volume Nouveau nom
+Le numÚro de sÚrie du volume est 30FA-23FE
+D:.
+ª   Dockerfile
+ª   import_context_window.ps1
+ª   pom.xml
+ª   project_context.txt
+ª   
+ª   +---wrapper
+ª           maven-wrapper.properties
+ª           
+ª       settings.json
+ª       
++---src
+ª   +---main
+ª   ª   +---java
+ª   ª   ª   +---com
+ª   ª   ª       +---project
+ª   ª   ª           +---apirental
+ª   ª   ª               ª   ApirentalApplication.java
+ª   ª   ª               ª   
+ª   ª   ª               +---config
+ª   ª   ª               ª       OpenApiConfig.java
+ª   ª   ª               ª       SecurityConfig.java
+ª   ª   ª               ª       
+ª   ª   ª               +---modules
+ª   ª   ª               ª   ª   explication.md
+ª   ª   ª               ª   ª   
+ª   ª   ª               ª   +---audit
+ª   ª   ª               ª   ª   +---domain
+ª   ª   ª               ª   ª   ª       AuditEntity.java
+ª   ª   ª               ª   ª   ª       
+ª   ª   ª               ª   ª   +---listener
+ª   ª   ª               ª   ª   ª       AuditListener.java
+ª   ª   ª               ª   ª   ª       
+ª   ª   ª               ª   ª   +---repository
+ª   ª   ª               ª   ª           AuditRepository.java
+ª   ª   ª               ª   ª           
+ª   ª   ª               ª   +---auth
+ª   ª   ª               ª   ª   +---api
+ª   ª   ª               ª   ª   ª       AuthController.java
+ª   ª   ª               ª   ª   ª       
+ª   ª   ª               ª   ª   +---domain
+ª   ª   ª               ª   ª   ª       UserEntity.java
+ª   ª   ª               ª   ª   ª       
+ª   ª   ª               ª   ª   +---dto
+ª   ª   ª               ª   ª   ª       AuthResponse.java
+ª   ª   ª               ª   ª   ª       LoginRequest.java
+ª   ª   ª               ª   ª   ª       RegisterRequest.java
+ª   ª   ª               ª   ª   ª       
+ª   ª   ª               ª   ª   +---listener
+ª   ª   ª               ª   ª   ª       explication.md
+ª   ª   ª               ª   ª   ª       
+ª   ª   ª               ª   ª   +---mapper
+ª   ª   ª               ª   ª   ª       UserMapper.java
+ª   ª   ª               ª   ª   ª       
+ª   ª   ª               ª   ª   +---repository
+ª   ª   ª               ª   ª   ª       UserRepository.java
+ª   ª   ª               ª   ª   ª       
+ª   ª   ª               ª   ª   +---services
+ª   ª   ª               ª   ª           AuthService.java
+ª   ª   ª               ª   ª           
+ª   ª   ª               ª   +---organization
+ª   ª   ª               ª   ª   +---api
+ª   ª   ª               ª   ª   ª       OrganizationController.java
+ª   ª   ª               ª   ª   ª       
+ª   ª   ª               ª   ª   +---domain
+ª   ª   ª               ª   ª   ª       OrganizationEntity.java
+ª   ª   ª               ª   ª   ª       
+ª   ª   ª               ª   ª   +---dto
+ª   ª   ª               ª   ª   ª       OrgRegisterRequest.java
+ª   ª   ª               ª   ª   ª       OrgResponseDTO.java
+ª   ª   ª               ª   ª   ª       OrgUpdateDTO.java
+ª   ª   ª               ª   ª   ª       
+ª   ª   ª               ª   ª   +---mapper
+ª   ª   ª               ª   ª   ª       OrgMapper.java
+ª   ª   ª               ª   ª   ª       
+ª   ª   ª               ª   ª   +---repository
+ª   ª   ª               ª   ª   ª       OrganizationRepository.java
+ª   ª   ª               ª   ª   ª       
+ª   ª   ª               ª   ª   +---services
+ª   ª   ª               ª   ª           OrganizationService.java
+ª   ª   ª               ª   ª           
+ª   ª   ª               ª   +---subscription
+ª   ª   ª               +---shared
+ª   ª   ª                   +---config
+ª   ª   ª                   ª       CorsConfig.java
+ª   ª   ª                   ª       
+ª   ª   ª                   +---events
+ª   ª   ª                   ª       AuditEvent.java
+ª   ª   ª                   ª       
+ª   ª   ª                   +---exceptions
+ª   ª   ª                   ª       GlobalExceptionHandler.java
+ª   ª   ª                   ª       
+ª   ª   ª                   +---security
+ª   ª   ª                   ª       JwtUtil.java
+ª   ª   ª                   ª       
+ª   ª   ª                   +---utils
+ª   ª   ª                           explication.md
+ª   ª   ª                           
+ª   ª   +---resources
+ª   ª       ª   .env.example
+ª   ª       ª   application.properties
+ª   ª       ª   schema.sql
+ª   ª       ª   
+ª   ª       +---db
+ª   ª           +---changelog
+ª   ª                   db.changelog-master.xml
+ª   ª                   
+ª   +---test
+ª       +---java
+ª           +---com
+ª               +---project
+ª                   +---apirental
+ª                           ApirentalApplicationTests.java
+ª                           
+    +---classes
+    ª   ª   .env.example
+    ª   ª   application.properties
+    ª   ª   schema.sql
+    ª   ª   
+    ª   +---com
+    ª   ª   +---project
+    ª   ª       +---apirental
+    ª   ª           ª   ApirentalApplication.class
+    ª   ª           ª   
+    ª   ª           +---config
+    ª   ª           ª       OpenApiConfig.class
+    ª   ª           ª       SecurityConfig.class
+    ª   ª           ª       
+    ª   ª           +---modules
+    ª   ª           ª   ª   explication.md
+    ª   ª           ª   ª   
+    ª   ª           ª   +---audit
+    ª   ª           ª   ª   +---domain
+    ª   ª           ª   ª   ª       AuditEntity.class
+    ª   ª           ª   ª   ª       
+    ª   ª           ª   ª   +---listener
+    ª   ª           ª   ª   ª       AuditListener.class
+    ª   ª           ª   ª   ª       
+    ª   ª           ª   ª   +---repository
+    ª   ª           ª   ª           AuditRepository.class
+    ª   ª           ª   ª           
+    ª   ª           ª   +---auth
+    ª   ª           ª   ª   +---api
+    ª   ª           ª   ª   ª       AuthController.class
+    ª   ª           ª   ª   ª       
+    ª   ª           ª   ª   +---domain
+    ª   ª           ª   ª   ª       UserEntity.class
+    ª   ª           ª   ª   ª       
+    ª   ª           ª   ª   +---dto
+    ª   ª           ª   ª   ª       AuthResponse.class
+    ª   ª           ª   ª   ª       LoginRequest.class
+    ª   ª           ª   ª   ª       RegisterRequest.class
+    ª   ª           ª   ª   ª       
+    ª   ª           ª   ª   +---listener
+    ª   ª           ª   ª   ª       explication.md
+    ª   ª           ª   ª   ª       
+    ª   ª           ª   ª   +---mapper
+    ª   ª           ª   ª   ª       UserMapper.class
+    ª   ª           ª   ª   ª       
+    ª   ª           ª   ª   +---repository
+    ª   ª           ª   ª   ª       UserRepository.class
+    ª   ª           ª   ª   ª       
+    ª   ª           ª   ª   +---services
+    ª   ª           ª   ª           AuthService.class
+    ª   ª           ª   ª           
+    ª   ª           ª   +---organization
+    ª   ª           ª   ª   +---api
+    ª   ª           ª   ª   ª       OrganizationController.class
+    ª   ª           ª   ª   ª       
+    ª   ª           ª   ª   +---domain
+    ª   ª           ª   ª   ª       OrganizationEntity.class
+    ª   ª           ª   ª   ª       
+    ª   ª           ª   ª   +---dto
+    ª   ª           ª   ª   ª       OrgRegisterRequest.class
+    ª   ª           ª   ª   ª       OrgResponseDTO.class
+    ª   ª           ª   ª   ª       OrgUpdateDTO.class
+    ª   ª           ª   ª   ª       
+    ª   ª           ª   ª   +---mapper
+    ª   ª           ª   ª   ª       OrgMapper.class
+    ª   ª           ª   ª   ª       
+    ª   ª           ª   ª   +---repository
+    ª   ª           ª   ª   ª       OrganizationRepository.class
+    ª   ª           ª   ª   ª       
+    ª   ª           ª   ª   +---services
+    ª   ª           ª   ª           OrganizationService.class
+    ª   ª           ª   ª           
+    ª   ª           ª   +---subscription
+    ª   ª           +---shared
+    ª   ª               +---config
+    ª   ª               ª       CorsConfig.class
+    ª   ª               ª       
+    ª   ª               +---events
+    ª   ª               ª       AuditEvent.class
+    ª   ª               ª       
+    ª   ª               +---exceptions
+    ª   ª               ª       GlobalExceptionHandler$ErrorResponse.class
+    ª   ª               ª       GlobalExceptionHandler.class
+    ª   ª               ª       
+    ª   ª               +---security
+    ª   ª               ª       JwtUtil.class
+    ª   ª               ª       
+    ª   ª               +---utils
+    ª   ª                       explication.md
+    ª   ª                       
+    ª   +---db
+    ª       +---changelog
+    ª               db.changelog-master.xml
+    ª               
+    +---generated-sources
+    ª   +---annotations
+    +---generated-test-sources
+    ª   +---test-annotations
+    +---test-classes
+        +---com
+            +---project
+                +---apirental
+                        ApirentalApplicationTests.class
+                        
+
+
+## 2. Contenu des Fichiers
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\pom.xml
+`$ext
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>3.4.12</version>
+		<relativePath/> <!-- lookup parent from repository -->
+	</parent>
+	<groupId>com.project</groupId>
+	<artifactId>apirental</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>apirental</name>
+	<description>api spring boot du projet rental</description>
+	<url/>
+	<licenses>
+		<license/>
+	</licenses>
+	<developers>
+		<developer/>
+	</developers>
+	<scm>
+		<connection/>
+		<developerConnection/>
+		<tag/>
+		<url/>
+	</scm>
+	<properties>
+		<java.version>21</java.version>
+        <!-- Ajout d'une propriÃ©tÃ© pour gÃ©rer la version de SpringDoc facilement -->
+        <springdoc.version>2.7.0</springdoc.version>
+	</properties>
+	<dependencies>
+		<!-- R2DBC (RÃ©actif) pour l'application -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-r2dbc</artifactId>
+		</dependency>
+		<!-- PostgreSQL R2DBC Driver -->
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>r2dbc-postgresql</artifactId>
+		</dependency>
+
+		<!-- JDBC (Bloquant) pour Liquibase UNIQUEMENT -->
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+
+		<!-- Liquibase -->
+		<dependency>
+			<groupId>org.liquibase</groupId>
+			<artifactId>liquibase-core</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-validation</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-webflux</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security</artifactId>
+		</dependency>
+
+        <!-- MISE A JOUR ICI : Version 2.7.0 pour compatibilitÃ© Spring Boot 3.4+ -->
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webflux-ui</artifactId>
+			<version>${springdoc.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-api</artifactId>
+			<version>0.11.5</version>
+		</dependency>
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-impl</artifactId>
+			<version>0.11.5</version>
+			<scope>runtime</scope>
+		</dependency>
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-jackson</artifactId>
+			<version>0.11.5</version>
+			<scope>runtime</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<optional>true</optional>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>io.projectreactor</groupId>
+			<artifactId>reactor-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<annotationProcessorPaths>
+						<path>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+						</path>
+					</annotationProcessorPaths>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+				<configuration>
+					<excludes>
+						<exclude>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+						</exclude>
+					</excludes>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+</project>
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\.mvn\wrapper\maven-wrapper.properties
+`$ext
+wrapperVersion=3.3.4
+distributionType=only-script
+distributionUrl=https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.11/apache-maven-3.9.11-bin.zip
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\ApirentalApplication.java
+`$ext
+package com.project.apirental;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.data.r2dbc.config.EnableR2dbcAuditing;
+import org.springframework.scheduling.annotation.EnableAsync;
+
+@SpringBootApplication
+@EnableR2dbcAuditing // Active l'audit automatique pour R2DBC (dates de crÃ©ation, etc.)
+@EnableAsync         // Indispensable pour que votre @Async dans AuditListener fonctionne
+public class ApirentalApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(ApirentalApplication.class, args);
+    }
+
+}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\config\OpenApiConfig.java
+`$ext
+package com.project.apirental.config;
+
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.security.SecurityScheme;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
+import org.springdoc.core.models.GroupedOpenApi;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class OpenApiConfig {
+
+    @Bean
+    public OpenAPI customOpenAPI() {
+        return new OpenAPI()
+                .info(new Info().title("API Rental").version("1.0"))
+                .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
+                .components(new io.swagger.v3.oas.models.Components()
+                        .addSecuritySchemes("bearerAuth",
+                                new SecurityScheme().type(SecurityScheme.Type.HTTP).scheme("bearer").bearerFormat("JWT")));
+    }
+
+    // Groupe 1 : Auth (Public - Login/Register)
+    @Bean
+    public GroupedOpenApi authApi() {
+        return GroupedOpenApi.builder()
+                .group("1-authentification")
+                .pathsToMatch("/auth/**")
+                .build();
+    }
+
+    // Groupe 2 : Client (NÃ©cessite token)
+    @Bean
+    public GroupedOpenApi clientApi() {
+        return GroupedOpenApi.builder()
+                .group("2-client")
+                .pathsToMatch("/api/client/**")
+                .build();
+    }
+
+    // Groupe 3 : Organisation (NÃ©cessite token)
+    @Bean
+    public GroupedOpenApi orgApi() {
+        return GroupedOpenApi.builder()
+                .group("3-organization")
+                .pathsToMatch("/api/org/**")
+                .build();
+    }
+}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\config\SecurityConfig.java
+`$ext
+package com.project.apirental.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
+import org.springframework.security.config.web.server.ServerHttpSecurity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.server.SecurityWebFilterChain;
+
+@Configuration
+@EnableWebFluxSecurity
+public class SecurityConfig {
+
+    @Bean
+    public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
+        return http
+                .csrf(ServerHttpSecurity.CsrfSpec::disable)
+                .authorizeExchange(exchanges -> exchanges
+                        .pathMatchers("/auth/**", "/swagger-ui.html", "/webjars/**", "/v3/api-docs/**").permitAll()
+                        .pathMatchers("/api/org/**").hasAuthority("ROLE_ORGANIZATION") // Exemple de protection par role
+                        .anyExchange().authenticated()
+                )
+                .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
+                .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
+                .build();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\explication.md
+`$ext
+#### notre architecture est une architecture modulaire tous les differents module sont implementÃ©s mais chacun dans son dossier permttant ainsi de les exporter facilement dans d'autres projets afin de transformer ce projet en microservice pour une evolution de celui-ci 
+
+##### Dans le module auth j'ai mis toute la structure generale d'un module mais pour les module tous les dossiers ne sont pas forcement necessaire comme exemple les module comme la gestion des logs qui necessite les listener pour ecouter chaque evenement du syteme ou meme celui de notifications qui ne necessite pas forcement tous les dossier 
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\audit\domain\AuditEntity.java
+`$ext
+package com.project.apirental.modules.audit.domain;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
+import org.springframework.data.domain.Persistable;
+import org.springframework.data.relational.core.mapping.Table;
+import lombok.Data;
+import lombok.Builder;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@Table("audits")
+public class AuditEntity implements Persistable<UUID> {
+    @Id
+    private UUID id;
+    private String action;
+    private String module;
+    private String details;
+    private LocalDateTime timestamp;
+
+    @Transient
+    @Builder.Default
+    @JsonIgnore
+    private boolean isNewRecord = false;
+
+    @Override
+    @Transient
+    public boolean isNew() {
+        return isNewRecord || id == null;
+    }
+}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\audit\listener\AuditListener.java
+`$ext
+package com.project.apirental.modules.audit.listener;
+
+import com.project.apirental.modules.audit.domain.AuditEntity;
+import com.project.apirental.modules.audit.repository.AuditRepository;
+import com.project.apirental.shared.events.AuditEvent;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Component;
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class AuditListener {
+
+    private final AuditRepository auditRepository;
+
+    @EventListener
+    @Async
+    public void handleAuditEvent(AuditEvent event) {
+        AuditEntity audit = AuditEntity.builder()
+                .id(UUID.randomUUID())
+                .action(event.action())
+                .module(event.module())
+                .details(event.details())
+                .timestamp(LocalDateTime.now())
+                .isNewRecord(true) // <--- IMPORTANT : Force l'INSERT
+                .build();
+
+        auditRepository.save(audit)
+                .doOnError(e -> log.error("Erreur lors de l'enregistrement de l'audit: {}", e.getMessage()))
+                .subscribe(); // Fire-and-forget
+    }
+}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\audit\repository\AuditRepository.java
+`$ext
+package com.project.apirental.modules.audit.repository;
+
+import com.project.apirental.modules.audit.domain.AuditEntity;
+
+import java.util.UUID;
+
+import org.springframework.data.r2dbc.repository.R2dbcRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface AuditRepository extends R2dbcRepository<AuditEntity, UUID> {
+}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\auth\api\AuthController.java
+`$ext
+package com.project.apirental.modules.auth.api;
+
+import com.project.apirental.modules.auth.domain.UserEntity;
+import com.project.apirental.modules.auth.dto.*;
+import com.project.apirental.modules.auth.services.AuthService;
+import com.project.apirental.modules.organization.domain.OrganizationEntity;
+import com.project.apirental.modules.organization.dto.OrgRegisterRequest;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Mono;
+
+@RestController
+@RequestMapping("/auth")
+@RequiredArgsConstructor
+public class AuthController {
+
+    private final AuthService authService;
+
+    @PostMapping("/login")
+    public Mono<ResponseEntity<AuthResponse>> login(@RequestBody LoginRequest request) {
+        return authService.login(request)
+                .map(ResponseEntity::ok);
+    }
+
+    @PostMapping("/register/client")
+    public Mono<ResponseEntity<UserEntity>> registerClient(@RequestBody RegisterRequest request) {
+        return authService.registerClient(request)
+                .map(ResponseEntity::ok);
+    }
+
+    @PostMapping("/register/organization")
+    public Mono<ResponseEntity<OrganizationEntity>> registerOrganization(@RequestBody OrgRegisterRequest request) {
+        return authService.registerOrganization(request)
+                .map(ResponseEntity::ok);
+    }
+}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\auth\domain\UserEntity.java
+`$ext
+package com.project.apirental.modules.auth.domain;
+
+import java.util.UUID;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
+import org.springframework.data.domain.Persistable;
+import org.springframework.data.relational.core.mapping.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@Table("users")
+public class UserEntity implements Persistable<UUID> {
+    @Id
+    private UUID id;
+    private String email;
+    private String password;
+    private String role;
+
+    // Champ technique pour indiquer Ã  R2DBC si c'est un INSERT ou UPDATE
+    @Transient 
+    @Builder.Default
+    @JsonIgnore
+    private boolean isNewRecord = false;
+
+    @Override
+    @Transient
+    public boolean isNew() {
+        // Si isNewRecord est true OU si l'id est null, c'est un INSERT
+        return isNewRecord || id == null;
+    }
+}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\auth\dto\AuthResponse.java
+`$ext
+package com.project.apirental.modules.auth.dto;
+
+public record AuthResponse(String token) {}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\auth\dto\LoginRequest.java
+`$ext
+package com.project.apirental.modules.auth.dto;
+
+public record LoginRequest(String email, String password) {}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\auth\dto\RegisterRequest.java
+`$ext
+package com.project.apirental.modules.auth.dto;
+
+public record RegisterRequest(String email, String password) {}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\auth\listener\explication.md
+`$ext
+#### Cette dossier a pour but de mettre les fichier lie a la logique d'ecoute pour les entites qui en ont besoin cela dans l'utilisation du design pattern observer mais dans ce cas il n'est pas necessaire 
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\auth\mapper\UserMapper.java
+`$ext
+package com.project.apirental.modules.auth.mapper;
+
+
+public interface UserMapper {
+    // UserDTO toDto(UserEntity entity);
+    // UserEntity toEntity(UserDTO dto);
+}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\auth\repository\UserRepository.java
+`$ext
+package com.project.apirental.modules.auth.repository;
+
+import java.util.UUID;
+
+import com.project.apirental.modules.auth.domain.UserEntity;
+import org.springframework.data.r2dbc.repository.R2dbcRepository;
+import reactor.core.publisher.Mono;
+
+public interface UserRepository extends R2dbcRepository<UserEntity, UUID> {
+    Mono<UserEntity> findByEmail(String email);
+}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\auth\services\AuthService.java
+`$ext
+package com.project.apirental.modules.auth.services;
+
+import com.project.apirental.modules.auth.domain.UserEntity;
+import com.project.apirental.modules.auth.dto.*;
+import com.project.apirental.modules.organization.dto.OrgRegisterRequest;
+import com.project.apirental.modules.auth.repository.UserRepository;
+import com.project.apirental.modules.organization.domain.OrganizationEntity;
+import com.project.apirental.modules.organization.repository.OrganizationRepository;
+import com.project.apirental.shared.events.AuditEvent;
+import com.project.apirental.shared.security.JwtUtil;
+import lombok.RequiredArgsConstructor;
+
+import java.util.UUID;
+
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import reactor.core.publisher.Mono;
+
+@Service
+@RequiredArgsConstructor
+public class AuthService {
+
+    private final UserRepository userRepository;
+    private final OrganizationRepository orgRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
+    private final ApplicationEventPublisher eventPublisher;
+
+    // Authentification (Login)
+    public Mono<AuthResponse> login(LoginRequest request) {
+        return userRepository.findByEmail(request.email())
+                .filter(u -> passwordEncoder.matches(request.password(), u.getPassword()))
+                .map(u -> {
+                    // Audit de succÃ¨s
+                    eventPublisher.publishEvent(new AuditEvent("LOGIN", "AUTH", "User logged in: " + u.getEmail()));
+                    return new AuthResponse(jwtUtil.generateToken(u.getEmail(), u.getRole()));
+                })
+                .switchIfEmpty(Mono.error(new RuntimeException("Bad credentials")));
+    }
+
+    // Inscription Client Simple
+    public Mono<UserEntity> registerClient(RegisterRequest request) {
+        return userRepository.findByEmail(request.email())
+                .flatMap(existing -> Mono.error(new RuntimeException("Email already exists")))
+                .switchIfEmpty(Mono.defer(() -> {
+                    UserEntity user = UserEntity.builder()
+                            .id(UUID.randomUUID())
+                            .email(request.email())
+                            .password(passwordEncoder.encode(request.password()))
+                            .role("CLIENT")
+                            .isNewRecord(true) // <--- IMPORTANT : Force l'INSERT
+                            .build();
+                    return userRepository.save(user)
+                            .doOnSuccess(u -> eventPublisher.publishEvent(new AuditEvent("REGISTER_CLIENT", "AUTH", "New client: " + u.getEmail())));
+                })).cast(UserEntity.class);
+    }
+
+    // ScÃ©nario Organisation: CrÃ©ation User + CrÃ©ation Org
+    @Transactional // Transaction rÃ©active
+    public Mono<OrganizationEntity> registerOrganization(OrgRegisterRequest request) {
+        return userRepository.findByEmail(request.email())
+                .flatMap(existing -> Mono.error(new RuntimeException("Email already exists")))
+                .switchIfEmpty(Mono.defer(() -> {
+                    // 1. CrÃ©er le User
+                    UserEntity user = UserEntity.builder()
+                            .id(UUID.randomUUID())
+                            .email(request.email())
+                            .password(passwordEncoder.encode(request.password()))
+                            .role("ORGANIZATION")
+                            .isNewRecord(true) // <--- IMPORTANT : Force l'INSERT
+                            .build();
+
+                    return userRepository.save(user).flatMap(savedUser -> {
+                        // 2. CrÃ©er l'Organisation liÃ©e
+                        OrganizationEntity org = OrganizationEntity.builder()
+                                .id(UUID.randomUUID()) // On gÃ©nÃ¨re l'ID aussi pour l'org
+                                .name(request.orgName())
+                                .ownerId(savedUser.getId())
+                                .isNewRecord(true) // <--- IMPORTANT : Force l'INSERT
+                                .build();
+                        return orgRepository.save(org)
+                                .doOnSuccess(o -> eventPublisher.publishEvent(new AuditEvent("REGISTER_ORG", "AUTH", "New Org: " + o.getName())));
+                    });
+                })).cast(OrganizationEntity.class);
+    }
+}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\organization\api\OrganizationController.java
+`$ext
+package com.project.apirental.modules.organization.api;
+
+import com.project.apirental.modules.organization.dto.OrgResponseDTO;
+import com.project.apirental.modules.organization.dto.OrgUpdateDTO;
+import com.project.apirental.modules.organization.services.OrganizationService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+
+import java.util.UUID;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Mono;
+
+@RestController
+@RequestMapping("/api/org")
+@RequiredArgsConstructor
+@Tag(name = "Organization Management", description = "Endpoints pour la gestion des organisations")
+@SecurityRequirement(name = "bearerAuth") // Indique Ã  Swagger que ces routes nÃ©cessitent un token
+public class OrganizationController {
+
+    private final OrganizationService organizationService;
+
+    @Operation(summary = "Obtenir les dÃ©tails d'une organisation")
+    @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ORGANIZATION')") // Protection par RÃ´le
+    public Mono<ResponseEntity<OrgResponseDTO>> getOrganization(@PathVariable UUID id) {
+        return organizationService.getOrganization(id)
+                .map(ResponseEntity::ok);
+    }
+
+    @Operation(summary = "Mettre Ã  jour une organisation")
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ORGANIZATION')") // Protection par RÃ´le
+    public Mono<ResponseEntity<OrgResponseDTO>> updateOrganization(
+            @PathVariable UUID id,
+            @RequestBody OrgUpdateDTO request) {
+        return organizationService.updateOrganization(id, request)
+                .map(ResponseEntity::ok);
+    }
+}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\organization\domain\OrganizationEntity.java
+`$ext
+package com.project.apirental.modules.organization.domain;
+
+import java.util.UUID;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
+import org.springframework.data.domain.Persistable;
+import org.springframework.data.relational.core.mapping.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@Table("organizations")
+public class OrganizationEntity implements Persistable<UUID> {
+    @Id
+    private UUID id;
+    private String name;
+    private UUID ownerId;
+
+    @Transient
+    @Builder.Default
+    @JsonIgnore
+    private boolean isNewRecord = false;
+
+    @Override
+    @Transient
+    public boolean isNew() {
+        return isNewRecord || id == null;
+    }
+}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\organization\dto\OrgRegisterRequest.java
+`$ext
+package com.project.apirental.modules.organization.dto;
+
+public record OrgRegisterRequest(String email, String password, String orgName) {}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\organization\dto\OrgResponseDTO.java
+`$ext
+package com.project.apirental.modules.organization.dto;
+
+import java.util.UUID;
+
+public record OrgResponseDTO(UUID id, String name, UUID ownerId) {}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\organization\dto\OrgUpdateDTO.java
+`$ext
+package com.project.apirental.modules.organization.dto;
+
+public record OrgUpdateDTO(String name, String description, String address) {}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\organization\mapper\OrgMapper.java
+`$ext
+package com.project.apirental.modules.organization.mapper;
+
+import com.project.apirental.modules.organization.domain.OrganizationEntity;
+import com.project.apirental.modules.organization.dto.OrgResponseDTO;
+import org.springframework.stereotype.Component;
+
+@Component
+public class OrgMapper {
+
+    public OrgResponseDTO toDto(OrganizationEntity entity) {
+        if (entity == null) return null;
+        return new OrgResponseDTO(
+                entity.getId(),
+                entity.getName(),
+                entity.getOwnerId()
+        );
+    }
+}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\organization\repository\OrganizationRepository.java
+`$ext
+package com.project.apirental.modules.organization.repository;
+
+import com.project.apirental.modules.organization.domain.OrganizationEntity;
+
+import java.util.UUID;
+
+import org.springframework.data.r2dbc.repository.R2dbcRepository;
+
+public interface OrganizationRepository extends R2dbcRepository<OrganizationEntity, UUID> {
+}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\organization\services\OrganizationService.java
+`$ext
+package com.project.apirental.modules.organization.services;
+
+import com.project.apirental.modules.organization.dto.OrgResponseDTO;
+import com.project.apirental.modules.organization.dto.OrgUpdateDTO;
+import com.project.apirental.modules.organization.mapper.OrgMapper;
+import com.project.apirental.modules.organization.repository.OrganizationRepository;
+import com.project.apirental.shared.events.AuditEvent;
+import lombok.RequiredArgsConstructor;
+
+import java.util.UUID;
+
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import reactor.core.publisher.Mono;
+
+@Service
+@RequiredArgsConstructor
+public class OrganizationService {
+
+    // On rÃ©utilise le repository dÃ©fini dans le module Auth (ou on pourrait le dÃ©placer dans Shared)
+    private final OrganizationRepository organizationRepository;
+    private final OrgMapper orgMapper;
+    private final ApplicationEventPublisher eventPublisher;
+
+    public Mono<OrgResponseDTO> getOrganization(UUID id) {
+        return organizationRepository.findById(id)
+                .map(orgMapper::toDto)
+                .switchIfEmpty(Mono.error(new RuntimeException("Organization not found")));
+    }
+
+    @Transactional
+    public Mono<OrgResponseDTO> updateOrganization(UUID id, OrgUpdateDTO request) {
+        return organizationRepository.findById(id)
+                .flatMap(org -> {
+                    // Mise Ã  jour des champs
+                    if(request.name() != null) org.setName(request.name());
+                    // Ici on pourrait mapper d'autres champs si l'entitÃ© OrganizationEntity avait "description" etc.
+
+                    return organizationRepository.save(org)
+                            .doOnSuccess(updatedOrg -> {
+                                // DÃ©clenchement de l'audit asynchrone
+                                eventPublisher.publishEvent(new AuditEvent(
+                                        "UPDATE_ORG",
+                                        "ORGANIZATION",
+                                        "Updated organization: " + updatedOrg.getName()
+                                ));
+                            });
+                })
+                .map(orgMapper::toDto)
+                .switchIfEmpty(Mono.error(new RuntimeException("Organization not found")));
+    }
+}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\shared\config\CorsConfig.java
+`$ext
+package com.project.apirental.shared.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.reactive.CorsWebFilter;
+import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
+
+@Configuration
+public class CorsConfig {
+
+    @Bean
+    public CorsWebFilter corsWebFilter() {
+        CorsConfiguration corsConfig = new CorsConfiguration();
+        // Autoriser votre frontend (ex: React sur localhost:3000)
+        corsConfig.setAllowedOrigins(Arrays.asList("http://localhost:3000", "https://votre-app.vercel.app"));
+        corsConfig.setMaxAge(3600L);
+        corsConfig.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        corsConfig.setAllowedHeaders(Arrays.asList("Content-Type", "Authorization", "x-requested-with"));
+        corsConfig.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", corsConfig);
+
+        return new CorsWebFilter(source);
+    }
+}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\shared\events\AuditEvent.java
+`$ext
+package com.project.apirental.shared.events;
+
+public record AuditEvent(String action, String module, String details) {}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\shared\exceptions\GlobalExceptionHandler.java
+`$ext
+package com.project.apirental.shared.exceptions;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import reactor.core.publisher.Mono;
+
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    // Capture les RuntimeException (ex: "Email already exists") et renvoie 400 Bad Request
+    @ExceptionHandler(RuntimeException.class)
+    public Mono<ResponseEntity<ErrorResponse>> handleRuntimeException(RuntimeException ex) {
+        return Mono.just(
+                ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(new ErrorResponse(HttpStatus.BAD_REQUEST.value(), ex.getMessage()))
+        );
+    }
+
+    // Capture toutes les autres erreurs non gÃ©rÃ©es -> 500
+    @ExceptionHandler(Exception.class)
+    public Mono<ResponseEntity<ErrorResponse>> handleGeneralException(Exception ex) {
+        return Mono.just(
+                ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(new ErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), "Une erreur interne est survenue: " + ex.getMessage()))
+        );
+    }
+
+    // Petit DTO interne pour formater l'erreur proprement
+    public record ErrorResponse(int status, String message) {}
+}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\shared\security\JwtUtil.java
+`$ext
+package com.project.apirental.shared.security;
+
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+import java.security.Key;
+import java.util.Date;
+import java.util.Base64;
+
+@Component
+public class JwtUtil {
+
+    @Value("${jwt.secret}")
+    private String secret;
+
+    @Value("${jwt.expiration}")
+    private long expiration;
+
+    private Key getSignKey() {
+        byte[] keyBytes = Base64.getDecoder().decode(secret);
+        return Keys.hmacShaKeyFor(keyBytes);
+    }
+
+    public String generateToken(String username, String role) {
+        return Jwts.builder()
+                .setSubject(username)
+                .claim("role", role)
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + expiration))
+                .signWith(getSignKey(), SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    public String getUsernameFromToken(String token) {
+        return Jwts.parserBuilder().setSigningKey(getSignKey()).build().parseClaimsJws(token).getBody().getSubject();
+    }
+
+    public boolean validateToken(String token) {
+        try {
+            Jwts.parserBuilder().setSigningKey(getSignKey()).build().parseClaimsJws(token);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\shared\utils\explication.md
+`$ext
+#### Cette dossier a pour but de mettre les fichier lie aux utilitaires 
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\resources\application.properties
+`$ext
+# ==============================================================
+# Server port
+# ==============================================================
+server.port=8081
+
+spring.application.name=apirental
+
+# ==============================================================
+# Configuration R2DBC (RÃ©actif - Pour l'application)
+# ==============================================================
+spring.r2dbc.url=r2dbc:postgresql://dpg-d55b70mmcj7s73f8s7f0-a.oregon-postgres.render.com:5432/rental_db_5bd2
+spring.r2dbc.username=brayanne
+spring.r2dbc.password=VuyLTYYghOaai8i3FDKznqoBpadB0Qcu
+spring.r2dbc.properties.ssl=true
+
+# ==============================================================
+# Configuration Liquibase (JDBC - Pour la migration au dÃ©marrage)
+# ==============================================================
+spring.liquibase.enabled=true
+spring.liquibase.change-log=classpath:db/changelog/db.changelog-master.xml
+# URL JDBC explicite obligatoire pour que Liquibase fonctionne sans R2DBC
+# DB_SSL_PARAM doit valoir "?sslmode=require" sur Render, ou "?sslmode=disable" en local
+spring.liquibase.url=jdbc:postgresql://dpg-d55b70mmcj7s73f8s7f0-a.oregon-postgres.render.com:5432/rental_db_5bd2?sslmode=require
+spring.liquibase.user=brayanne
+spring.liquibase.password=VuyLTYYghOaai8i3FDKznqoBpadB0Qcu
+spring.liquibase.driver-class-name=org.postgresql.Driver
+
+# ==============================================================
+# Configuration Swagger (SpringDoc)
+# ==============================================================
+springdoc.api-docs.enabled=true
+springdoc.swagger-ui.enabled=true
+springdoc.swagger-ui.path=/swagger-ui.html
+
+# ==============================================================
+# Configuration WebFlux
+# ==============================================================
+spring.webflux.base-path=/
+
+# ==============================================================
+# Configuration JWT
+# ==============================================================
+# ClÃ© secrÃ¨te (gÃ©nÃ©rez-en une forte pour la prod via la variable JWT_SECRET)
+jwt.secret=${JWT_SECRET:7KyhCtwGUvIoqcxTCabQGm3FJ/F6LfCy9nmOg3hy+WA=}
+jwt.expiration=86400000
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\resources\schema.sql
+`$ext
+w-- Extension nÃ©cessaire pour la gÃ©nÃ©ration automatique des UUID par PostgreSQL
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+CREATE TABLE IF NOT EXISTS users (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    role VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS organizations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(255) NOT NULL,
+    owner_id UUID NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_owner FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS audits (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    action VARCHAR(255),
+    module VARCHAR(255),
+    details TEXT,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\test\java\com\project\apirental\ApirentalApplicationTests.java
+`$ext
+package com.project.apirental;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest
+class ApirentalApplicationTests {
+
+	@Test
+	void contextLoads() {
+	}
+
+}
+

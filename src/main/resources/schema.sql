@@ -1,4 +1,4 @@
--- Extension nécessaire pour la génération automatique des UUID par PostgreSQL
+w-- Extension nécessaire pour la génération automatique des UUID par PostgreSQL
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE IF NOT EXISTS users (
@@ -23,4 +23,16 @@ CREATE TABLE IF NOT EXISTS audits (
     module VARCHAR(255),
     details TEXT,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ... (garder le contenu existant) ...
+
+CREATE TABLE IF NOT EXISTS subscriptions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    organization_id UUID NOT NULL,
+    plan_type VARCHAR(50) NOT NULL, -- 'FREE', 'PRO', 'ENTERPRISE'
+    status VARCHAR(50) NOT NULL,    -- 'ACTIVE', 'EXPIRED'
+    start_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    end_date TIMESTAMP,             -- NULL pour le plan FREE (illimité dans le temps)
+    CONSTRAINT fk_organization FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
 );

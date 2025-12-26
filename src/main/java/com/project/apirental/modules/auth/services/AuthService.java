@@ -17,6 +17,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 
 @Service
 @RequiredArgsConstructor
@@ -38,6 +39,27 @@ public class AuthService {
                     return new AuthResponse(jwtUtil.generateToken(u.getEmail(), u.getRole()));
                 })
                 .switchIfEmpty(Mono.error(new RuntimeException("Bad credentials")));
+    }
+
+    // Nouvelle méthode : Récupérer l'utilisateur courant via le contexte de sécurité
+    public Mono<UserEntity> getCurrentUser() {
+        return ReactiveSecurityContextHolder.getContext()
+                .map(ctx -> ctx.getAuthentication().getName())
+                .flatMap(userRepository::findByEmail);
+    }
+
+    // Nouvelle méthode : Refresh Token
+    public Mono<AuthResponse> refreshToken(String oldToken) {
+        if (oldToken.startsWith("Bearer ")) {
+            oldToken = oldToken.substring(7);
+        }
+
+        if (jwtUtil.validateToken(oldToken)) {
+            String email = jwtUtil.getUsernameFromToken(oldToken);
+            return userRepository.findByEmail(email)
+                    .map(user -> new AuthResponse(jwtUtil.generateToken(user.getEmail(), user.getRole())));
+        }
+        return Mono.error(new RuntimeException("Invalid Token"));
     }
 
     // Inscription Client Simple
@@ -81,7 +103,7 @@ public class AuthService {
                     return userRepository.save(user).flatMap(savedUser -> {
                         // 2. Créer l'Organisation liée
                         OrganizationEntity org = OrganizationEntity.builder()
-                                .id(UUID.randomUUID()) // On génère l'ID aussi pour l'org
+                                .id(UUID.randomUUID())
                                 .name(request.orgName())
                                 .ownerId(savedUser.getId())
                                 .isNewRecord(true) // <--- IMPORTANT : Force l'INSERT

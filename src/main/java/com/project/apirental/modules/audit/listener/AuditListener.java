@@ -30,8 +30,10 @@ public class AuditListener {
                 .isNewRecord(true) // <--- IMPORTANT : Force l'INSERT
                 .build();
 
-        auditRepository.save(audit)
-                .doOnError(e -> log.error("Erreur lors de l'enregistrement de l'audit: {}", e.getMessage()))
-                .subscribe(); // Fire-and-forget
+        if (audit != null) {
+            auditRepository.save(audit)
+                    .doOnError(e -> log.error("Erreur lors de l'enregistrement de l'audit: {}", e.getMessage()))
+                    .subscribe(); // Fire-and-forget
+}
     }
 }

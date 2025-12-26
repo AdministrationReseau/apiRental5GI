@@ -19,7 +19,7 @@ import java.util.UUID;
 @RequestMapping("/api/subscriptions")
 @RequiredArgsConstructor
 @Tag(name = "Subscription Management")
-@SecurityRequirement(name = "bearerAuth")
+// @SecurityRequirement(name = "bearerAuth")
 public class SubscriptionController {
 
     private final SubscriptionService subscriptionService;

@@ -10,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
+import org.springframework.http.HttpHeaders;
+import org.springframework.web.server.ServerWebExchange;
 
 @RestController
 @RequestMapping("/auth")
@@ -20,7 +22,21 @@ public class AuthController {
 
     @PostMapping("/login")
     public Mono<ResponseEntity<AuthResponse>> login(@RequestBody LoginRequest request) {
-        return authService.login(request)
+        return authService.login(request).map(ResponseEntity::ok);
+    }
+
+    // Récupérer l'utilisateur connecté
+    @GetMapping("/me")
+    public Mono<ResponseEntity<UserEntity>> me() {
+        return authService.getCurrentUser()
+                .map(ResponseEntity::ok);
+    }
+
+    // Rafraîchir le token
+    @PostMapping("/refresh")
+    public Mono<ResponseEntity<AuthResponse>> refresh(ServerWebExchange exchange) {
+        String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+        return authService.refreshToken(authHeader)
                 .map(ResponseEntity::ok);
     }
 

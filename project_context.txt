@@ -1,5 +1,5 @@
 ﻿# Contexte du Projet : Fleet & Geofence API
-GÃ©nÃ©rÃ© le : 12/26/2025 11:15:44
+GÃ©nÃ©rÃ© le : 12/26/2025 12:09:16
 Framework : Spring Boot WebFlux (Reactive)
 
 ## 1. Arborescence du Projet
@@ -88,6 +88,29 @@ D:.
 ª   ª   ª               ª   ª           OrganizationService.java
 ª   ª   ª               ª   ª           
 ª   ª   ª               ª   +---subscription
+ª   ª   ª               ª       +---api
+ª   ª   ª               ª       ª       SubscriptionController.java
+ª   ª   ª               ª       ª       
+ª   ª   ª               ª       +---domain
+ª   ª   ª               ª       ª       PlanType.java
+ª   ª   ª               ª       ª       SubscriptionEntity.java
+ª   ª   ª               ª       ª       
+ª   ª   ª               ª       +---dto
+ª   ª   ª               ª       ª       PlanUpgradeRequest.java
+ª   ª   ª               ª       ª       SubscriptionResponseDTO.java
+ª   ª   ª               ª       ª       
+ª   ª   ª               ª       +---listener
+ª   ª   ª               ª       ª       SubscriptionListener.java
+ª   ª   ª               ª       ª       
+ª   ª   ª               ª       +---mapper
+ª   ª   ª               ª       ª       SubscriptionMapper.java
+ª   ª   ª               ª       ª       
+ª   ª   ª               ª       +---repository
+ª   ª   ª               ª       ª       SubscriptionRepository.java
+ª   ª   ª               ª       ª       
+ª   ª   ª               ª       +---services
+ª   ª   ª               ª               SubscriptionService.java
+ª   ª   ª               ª               
 ª   ª   ª               +---shared
 ª   ª   ª                   +---config
 ª   ª   ª                   ª       CorsConfig.java
@@ -193,6 +216,29 @@ D:.
     ª   ª           ª   ª           OrganizationService.class
     ª   ª           ª   ª           
     ª   ª           ª   +---subscription
+    ª   ª           ª       +---api
+    ª   ª           ª       ª       SubscriptionController.class
+    ª   ª           ª       ª       
+    ª   ª           ª       +---domain
+    ª   ª           ª       ª       PlanType.class
+    ª   ª           ª       ª       SubscriptionEntity.class
+    ª   ª           ª       ª       
+    ª   ª           ª       +---dto
+    ª   ª           ª       ª       PlanUpgradeRequest.class
+    ª   ª           ª       ª       SubscriptionResponseDTO.class
+    ª   ª           ª       ª       
+    ª   ª           ª       +---listener
+    ª   ª           ª       ª       SubscriptionListener.class
+    ª   ª           ª       ª       
+    ª   ª           ª       +---mapper
+    ª   ª           ª       ª       SubscriptionMapper.class
+    ª   ª           ª       ª       
+    ª   ª           ª       +---repository
+    ª   ª           ª       ª       SubscriptionRepository.class
+    ª   ª           ª       ª       
+    ª   ª           ª       +---services
+    ª   ª           ª               SubscriptionService.class
+    ª   ª           ª               
     ª   ª           +---shared
     ª   ª               +---config
     ª   ª               ª       CorsConfig.class
@@ -244,7 +290,7 @@ D:.
 	<groupId>com.project</groupId>
 	<artifactId>apirental</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>apirental</name>
+	<name>apirental</name> 
 	<description>api spring boot du projet rental</description>
 	<url/>
 	<licenses>
@@ -635,7 +681,7 @@ public class AuthController {
                 .map(ResponseEntity::ok);
     }
 
-    @PostMapping("/register/organization")
+    @PostMapping("/register/organizationOwner")
     public Mono<ResponseEntity<OrganizationEntity>> registerOrganization(@RequestBody OrgRegisterRequest request) {
         return authService.registerOrganization(request)
                 .map(ResponseEntity::ok);
@@ -667,12 +713,15 @@ import lombok.NoArgsConstructor;
 public class UserEntity implements Persistable<UUID> {
     @Id
     private UUID id;
+    private String firstname;
+    private String lastname;
+    private String fullname;
     private String email;
     private String password;
     private String role;
 
     // Champ technique pour indiquer Ã  R2DBC si c'est un INSERT ou UPDATE
-    @Transient 
+    @Transient
     @Builder.Default
     @JsonIgnore
     private boolean isNewRecord = false;
@@ -704,7 +753,11 @@ public record LoginRequest(String email, String password) {}
 `$ext
 package com.project.apirental.modules.auth.dto;
 
-public record RegisterRequest(String email, String password) {}
+public record RegisterRequest(
+    String firstname,
+    String lastname,
+    String email,
+    String password) {}
 
 ---
 ### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\auth\listener\explication.md
@@ -748,6 +801,7 @@ import com.project.apirental.modules.organization.dto.OrgRegisterRequest;
 import com.project.apirental.modules.auth.repository.UserRepository;
 import com.project.apirental.modules.organization.domain.OrganizationEntity;
 import com.project.apirental.modules.organization.repository.OrganizationRepository;
+import com.project.apirental.modules.subscription.services.SubscriptionService; 
 import com.project.apirental.shared.events.AuditEvent;
 import com.project.apirental.shared.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
@@ -789,6 +843,9 @@ public class AuthService {
                 .switchIfEmpty(Mono.defer(() -> {
                     UserEntity user = UserEntity.builder()
                             .id(UUID.randomUUID())
+                            .firstname(request.firstname())
+                            .lastname(request.lastname())
+                            .fullname(request.firstname() +" "+ request.lastname())
                             .email(request.email())
                             .password(passwordEncoder.encode(request.password()))
                             .role("CLIENT")
@@ -808,6 +865,9 @@ public class AuthService {
                     // 1. CrÃ©er le User
                     UserEntity user = UserEntity.builder()
                             .id(UUID.randomUUID())
+                            .firstname(request.firstname())
+                            .lastname(request.lastname())
+                            .fullname(request.firstname() +" "+ request.lastname())
                             .email(request.email())
                             .password(passwordEncoder.encode(request.password()))
                             .role("ORGANIZATION")
@@ -823,7 +883,12 @@ public class AuthService {
                                 .isNewRecord(true) // <--- IMPORTANT : Force l'INSERT
                                 .build();
                         return orgRepository.save(org)
-                                .doOnSuccess(o -> eventPublisher.publishEvent(new AuditEvent("REGISTER_ORG", "AUTH", "New Org: " + o.getName())));
+                              .flatMap(savedOrg -> 
+                                    // 3. CrÃ©er la souscription FREE (ChaÃ®nage rÃ©actif)
+                                    subscriptionService.initializeDefaultSubscription(savedOrg.getId())
+                                        .thenReturn(savedOrg) // On retourne l'organisation pour le flux final
+                                )
+                                .doOnSuccess(o -> eventPublisher.publishEvent(new AuditEvent("REGISTER_ORG", "AUTH", "New Org & Subscription: " + o.getName())));
                     });
                 })).cast(OrganizationEntity.class);
     }
@@ -922,7 +987,7 @@ public class OrganizationEntity implements Persistable<UUID> {
 `$ext
 package com.project.apirental.modules.organization.dto;
 
-public record OrgRegisterRequest(String email, String password, String orgName) {}
+public record OrgRegisterRequest(String firstname, String lastname, String email, String password, String orgName) {}
 
 ---
 ### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\organization\dto\OrgResponseDTO.java
@@ -1030,6 +1095,281 @@ public class OrganizationService {
                 })
                 .map(orgMapper::toDto)
                 .switchIfEmpty(Mono.error(new RuntimeException("Organization not found")));
+    }
+}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\subscription\api\SubscriptionController.java
+`$ext
+package com.project.apirental.modules.subscription.api;
+
+import com.project.apirental.modules.subscription.dto.PlanUpgradeRequest;
+import com.project.apirental.modules.subscription.dto.SubscriptionResponseDTO;
+import com.project.apirental.modules.subscription.mapper.SubscriptionMapper;
+import com.project.apirental.modules.subscription.services.SubscriptionService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Mono;
+
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/api/subscriptions")
+@RequiredArgsConstructor
+@Tag(name = "Subscription Management")
+@SecurityRequirement(name = "bearerAuth")
+public class SubscriptionController {
+
+    private final SubscriptionService subscriptionService;
+    private final SubscriptionMapper subscriptionMapper;
+
+    @Operation(summary = "RÃ©cupÃ©rer la souscription active d'une organisation")
+    @GetMapping("/org/{orgId}")
+    @PreAuthorize("hasRole('ORGANIZATION')")
+    public Mono<ResponseEntity<SubscriptionResponseDTO>> getMySubscription(@PathVariable UUID orgId) {
+        return subscriptionService.getActiveSubscription(orgId)
+                .map(subscriptionMapper::toDto)
+                .map(ResponseEntity::ok);
+    }
+
+    @Operation(summary = "Mettre Ã  jour le plan d'une organisation")
+    @PutMapping("/org/{orgId}/upgrade")
+    @PreAuthorize("hasRole('ORGANIZATION')")
+    public Mono<ResponseEntity<SubscriptionResponseDTO>> upgradePlan(
+            @PathVariable UUID orgId,
+            @RequestBody PlanUpgradeRequest request) {
+        return subscriptionService.upgradePlan(orgId, request.newPlan())
+                .map(subscriptionMapper::toDto)
+                .map(ResponseEntity::ok);
+    }
+}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\subscription\domain\PlanType.java
+`$ext
+package com.project.apirental.modules.subscription.domain;
+
+public enum PlanType {
+    FREE, PRO, ENTERPRISE
+}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\subscription\domain\SubscriptionEntity.java
+`$ext
+package com.project.apirental.modules.subscription.domain;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
+import org.springframework.data.domain.Persistable;
+import org.springframework.data.relational.core.mapping.Table;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@Table("subscriptions")
+public class SubscriptionEntity implements Persistable<UUID> {
+    @Id
+    private UUID id;
+    private UUID organizationId;
+    private String planType;
+    private String status;
+    private LocalDateTime startDate;
+    private LocalDateTime endDate;
+
+    @Transient
+    @Builder.Default
+    @JsonIgnore
+    private boolean isNewRecord = false;
+
+    @Override
+    @Transient
+    public boolean isNew() {
+        return isNewRecord || id == null;
+    }
+}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\subscription\dto\PlanUpgradeRequest.java
+`$ext
+package com.project.apirental.modules.subscription.dto;
+
+import com.project.apirental.modules.subscription.domain.PlanType;
+import jakarta.validation.constraints.NotNull;
+
+public record PlanUpgradeRequest(
+    @NotNull PlanType newPlan
+) {}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\subscription\dto\SubscriptionResponseDTO.java
+`$ext
+package com.project.apirental.modules.subscription.dto;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+public record SubscriptionResponseDTO(
+    UUID id,
+    UUID organizationId,
+    String planType,
+    String status,
+    LocalDateTime startDate,
+    LocalDateTime endDate
+) {}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\subscription\listener\SubscriptionListener.java
+`$ext
+package com.project.apirental.modules.subscription.listener;
+
+import com.project.apirental.shared.events.AuditEvent;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Component;
+
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class SubscriptionListener {
+
+    private final ApplicationEventPublisher eventPublisher;
+
+    @EventListener
+    @Async
+    public void onSubscriptionChanged(AuditEvent event) {
+        if ("UPDATE_PLAN".equals(event.action())) {
+            log.info("ðŸ”¥ Plan Upgrade detected: {}", event.details());
+            // Ici, on pourrait dÃ©clencher l'envoi d'un email de confirmation
+        }
+    }
+}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\subscription\mapper\SubscriptionMapper.java
+`$ext
+package com.project.apirental.modules.subscription.mapper;
+
+import com.project.apirental.modules.subscription.domain.SubscriptionEntity;
+import com.project.apirental.modules.subscription.dto.SubscriptionResponseDTO;
+import org.springframework.stereotype.Component;
+
+@Component
+public class SubscriptionMapper {
+
+    public SubscriptionResponseDTO toDto(SubscriptionEntity entity) {
+        if (entity == null) return null;
+        return new SubscriptionResponseDTO(
+            entity.getId(),
+            entity.getOrganizationId(),
+            entity.getPlanType(),
+            entity.getStatus(),
+            entity.getStartDate(),
+            entity.getEndDate()
+        );
+    }
+}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\subscription\repository\SubscriptionRepository.java
+`$ext
+package com.project.apirental.modules.subscription.repository;
+
+import com.project.apirental.modules.subscription.domain.SubscriptionEntity;
+import org.springframework.data.r2dbc.repository.R2dbcRepository;
+import org.springframework.stereotype.Repository;
+import reactor.core.publisher.Mono;
+
+import java.util.UUID;
+
+@Repository
+public interface SubscriptionRepository extends R2dbcRepository<SubscriptionEntity, UUID> {
+    Mono<SubscriptionEntity> findByOrganizationIdAndStatus(UUID organizationId, String status);
+}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\subscription\services\SubscriptionService.java
+`$ext
+package com.project.apirental.modules.subscription.services;
+
+import com.project.apirental.modules.subscription.domain.PlanType;
+import com.project.apirental.modules.subscription.domain.SubscriptionEntity;
+import com.project.apirental.modules.subscription.repository.SubscriptionRepository;
+import com.project.apirental.shared.events.AuditEvent;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class SubscriptionService {
+
+    private final SubscriptionRepository subscriptionRepository;
+    private final ApplicationEventPublisher eventPublisher;
+
+    /**
+     * Initialise un plan FREE par dÃ©faut pour une nouvelle organisation
+     */
+    public Mono<SubscriptionEntity> initializeDefaultSubscription(UUID organizationId) {
+        SubscriptionEntity subscription = SubscriptionEntity.builder()
+                .id(UUID.randomUUID())
+                .organizationId(organizationId)
+                .planType(PlanType.FREE.name())
+                .status("ACTIVE")
+                .startDate(LocalDateTime.now())
+                .isNewRecord(true)
+                .build();
+
+        return subscriptionRepository.save(subscription)
+                .doOnSuccess(s -> {
+                    log.info("Default FREE subscription created for Org: {}", organizationId);
+                    eventPublisher.publishEvent(new AuditEvent("CREATE_SUBSCRIPTION", "SUBSCRIPTION", "Default FREE plan for org: " + organizationId));
+                });
+    }
+
+    /**
+     * Retourne la souscription active pour vÃ©rification des quotas ultÃ©rieure
+     */
+    public Mono<SubscriptionEntity> getActiveSubscription(UUID organizationId) {
+        return subscriptionRepository.findByOrganizationIdAndStatus(organizationId, "ACTIVE")
+                .switchIfEmpty(Mono.error(new RuntimeException("No active subscription found for this organization")));
+    }
+    @org.springframework.transaction.annotation.Transactional
+    public Mono<SubscriptionEntity> upgradePlan(UUID organizationId, PlanType newPlan) {
+        return subscriptionRepository.findByOrganizationIdAndStatus(organizationId, "ACTIVE")
+                .flatMap(subscription -> {
+                    subscription.setPlanType(newPlan.name());
+                    // On pourrait ajouter ici une logique de date de fin si le plan est payant
+                    return subscriptionRepository.save(subscription)
+                            .doOnSuccess(s -> eventPublisher.publishEvent(new AuditEvent(
+                                    "UPDATE_PLAN", 
+                                    "SUBSCRIPTION", 
+                                    "Org " + organizationId + " upgraded to " + newPlan
+                            )));
+                })
+                .switchIfEmpty(Mono.error(new RuntimeException("Subscription not found")));
     }
 }
 
@@ -1243,6 +1583,18 @@ CREATE TABLE IF NOT EXISTS audits (
     module VARCHAR(255),
     details TEXT,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ... (garder le contenu existant) ...
+
+CREATE TABLE IF NOT EXISTS subscriptions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    organization_id UUID NOT NULL,
+    plan_type VARCHAR(50) NOT NULL, -- 'FREE', 'PRO', 'ENTERPRISE'
+    status VARCHAR(50) NOT NULL,    -- 'ACTIVE', 'EXPIRED'
+    start_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    end_date TIMESTAMP,             -- NULL pour le plan FREE (illimitÃ© dans le temps)
+    CONSTRAINT fk_organization FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
 );
 
 ---

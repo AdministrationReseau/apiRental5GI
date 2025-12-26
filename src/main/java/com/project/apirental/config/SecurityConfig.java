@@ -17,8 +17,14 @@ public class SecurityConfig {
         return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(exchanges -> exchanges
-                        .pathMatchers("/auth/**", "/swagger-ui.html", "/webjars/**", "/v3/api-docs/**").permitAll()
+                        .pathMatchers(
+                            "/auth/**",
+                            "/swagger-ui.html", 
+                            "/webjars/**", 
+                            "/v3/api-docs/**")
+                        .permitAll()
                         .pathMatchers("/api/org/**").hasAuthority("ROLE_ORGANIZATION") // Exemple de protection par role
+                        .pathMatchers("/api/subscriptions/**").hasAuthority("ROLE_ORGANIZATION")
                         .anyExchange().authenticated()
                 )
                 .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)

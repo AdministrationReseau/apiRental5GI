@@ -44,7 +44,8 @@ public class OpenApiConfig {
     public GroupedOpenApi orgApi() {
         return GroupedOpenApi.builder()
                 .group("3-organization")
-                .pathsToMatch("/api/org/**")
+                .pathsToMatch("/api/org/**", "/api/subscriptions/**")
                 .build();
     }
+
 }

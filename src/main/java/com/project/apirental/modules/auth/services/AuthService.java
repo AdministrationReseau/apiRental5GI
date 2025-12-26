@@ -6,6 +6,7 @@ import com.project.apirental.modules.organization.dto.OrgRegisterRequest;
 import com.project.apirental.modules.auth.repository.UserRepository;
 import com.project.apirental.modules.organization.domain.OrganizationEntity;
 import com.project.apirental.modules.organization.repository.OrganizationRepository;
+import com.project.apirental.modules.subscription.services.SubscriptionService;
 import com.project.apirental.shared.events.AuditEvent;
 import com.project.apirental.shared.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,8 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final OrganizationRepository orgRepository;
+    
+    private final SubscriptionService subscriptionService;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final ApplicationEventPublisher eventPublisher;
@@ -87,6 +90,11 @@ public class AuthService {
                                 .isNewRecord(true) // <--- IMPORTANT : Force l'INSERT
                                 .build();
                         return orgRepository.save(org)
+                                .flatMap(savedOrg -> 
+                                    // 3. Créer la souscription FREE (Chaînage réactif)
+                                    subscriptionService.initializeDefaultSubscription(savedOrg.getId())
+                                        .thenReturn(savedOrg) // On retourne l'organisation pour le flux final
+                                )
                                 .doOnSuccess(o -> eventPublisher.publishEvent(new AuditEvent("REGISTER_ORG", "AUTH", "New Org: " + o.getName())));
                     });
                 })).cast(OrganizationEntity.class);

@@ -20,12 +20,15 @@ import lombok.NoArgsConstructor;
 public class UserEntity implements Persistable<UUID> {
     @Id
     private UUID id;
+    private String firstname;
+    private String lastname;
+    private String fullname;
     private String email;
     private String password;
     private String role;
 
     // Champ technique pour indiquer à R2DBC si c'est un INSERT ou UPDATE
-    @Transient 
+    @Transient
     @Builder.Default
     @JsonIgnore
     private boolean isNewRecord = false;

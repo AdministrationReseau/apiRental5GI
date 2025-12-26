@@ -47,6 +47,9 @@ public class AuthService {
                 .switchIfEmpty(Mono.defer(() -> {
                     UserEntity user = UserEntity.builder()
                             .id(UUID.randomUUID())
+                            .firstname(request.firstname())
+                            .lastname(request.lastname())
+                            .fullname(request.firstname() +" "+ request.lastname())
                             .email(request.email())
                             .password(passwordEncoder.encode(request.password()))
                             .role("CLIENT")
@@ -66,6 +69,9 @@ public class AuthService {
                     // 1. Créer le User
                     UserEntity user = UserEntity.builder()
                             .id(UUID.randomUUID())
+                            .firstname(request.firstname())
+                            .lastname(request.lastname())
+                            .fullname(request.firstname() +" "+ request.lastname())
                             .email(request.email())
                             .password(passwordEncoder.encode(request.password()))
                             .role("ORGANIZATION")

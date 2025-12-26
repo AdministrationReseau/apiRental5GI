@@ -83,7 +83,7 @@ public class AuthService {
     }
 
     // Scénario Organisation: Création User + Création Org
-    @Transactional // Transaction réactive
+    @Transactional
     public Mono<OrganizationEntity> registerOrganization(OrgRegisterRequest request) {
         return userRepository.findByEmail(request.email())
                 .flatMap(existing -> Mono.error(new RuntimeException("Email already exists")))
@@ -97,16 +97,20 @@ public class AuthService {
                             .email(request.email())
                             .password(passwordEncoder.encode(request.password()))
                             .role("ORGANIZATION")
-                            .isNewRecord(true) // <--- IMPORTANT : Force l'INSERT
+                            .isNewRecord(true)
                             .build();
 
                     return userRepository.save(user).flatMap(savedUser -> {
-                        // 2. Créer l'Organisation liée
+                        // 2. Créer l'Organisation liée avec les valeurs par défaut
                         OrganizationEntity org = OrganizationEntity.builder()
                                 .id(UUID.randomUUID())
                                 .name(request.orgName())
                                 .ownerId(savedUser.getId())
-                                .isNewRecord(true) // <--- IMPORTANT : Force l'INSERT
+                                .email(savedUser.getEmail()) // Email de contact par défaut = email du owner
+                                .country("CM") // Défaut
+                                .timezone("Africa/Douala") // Défaut
+                                .isVerified(false)
+                                .isNewRecord(true)
                                 .build();
                         return orgRepository.save(org)
                                 .doOnSuccess(o -> eventPublisher.publishEvent(new AuditEvent("REGISTER_ORG", "AUTH", "New Org: " + o.getName())));

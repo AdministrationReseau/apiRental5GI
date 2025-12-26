@@ -36,3 +36,5 @@ build/
 .env
 
 projet_complet.txt
+project_context.txt
+import_context_window.ps1

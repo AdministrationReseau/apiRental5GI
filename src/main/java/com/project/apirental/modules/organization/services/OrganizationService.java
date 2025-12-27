@@ -4,6 +4,7 @@ import com.project.apirental.modules.organization.dto.OrgResponseDTO;
 import com.project.apirental.modules.organization.dto.OrgUpdateDTO;
 import com.project.apirental.modules.organization.mapper.OrgMapper;
 import com.project.apirental.modules.organization.repository.OrganizationRepository;
+import com.project.apirental.modules.subscription.repository.SubscriptionPlanRepository;
 import com.project.apirental.shared.events.AuditEvent;
 import lombok.RequiredArgsConstructor;
 
@@ -19,6 +20,7 @@ import reactor.core.publisher.Mono;
 public class OrganizationService {
 
     private final OrganizationRepository organizationRepository;
+    private final SubscriptionPlanRepository planRepository;
     private final OrgMapper orgMapper;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -69,4 +71,51 @@ public class OrganizationService {
             .map(orgMapper::toDto)
             .switchIfEmpty(Mono.error(new RuntimeException("Organization not found")));
     }
+   
+/**
+ * Vérifie si une organisation peut ajouter une ressource (AGENCY, VEHICLE, DRIVER)
+ * selon les limites de son plan de souscription.
+ */
+public Mono<Boolean> validateQuota(UUID orgId, String resourceType) {
+    return organizationRepository.findById(orgId)
+        .flatMap(org -> planRepository.findById(org.getSubscriptionPlanId())
+            .map(plan -> {
+                return switch (resourceType.toUpperCase()) {
+                    case "AGENCY" -> org.getCurrentAgencies() < plan.getMaxAgencies();
+                    case "VEHICLE" -> org.getCurrentVehicles() < plan.getMaxVehicles();
+                    case "DRIVER" -> org.getCurrentDrivers() < plan.getMaxDrivers();
+                    case "USER" -> org.getCurrentUsers() < plan.getMaxUsers();
+                    default -> false;
+                };
+            }))
+        .defaultIfEmpty(false);
+}
+
+/**
+ * Incrémente ou décrémente le compteur d'agences
+ */
+@Transactional
+public Mono<Void> updateAgencyCounter(UUID orgId, int increment) {
+    return organizationRepository.findById(orgId)
+        .flatMap(org -> {
+            org.setCurrentAgencies(org.getCurrentAgencies() + increment);
+            return organizationRepository.save(org);
+        }).then();
+}
+
+/**
+ * Méthode groupée pour mettre à jour n'importe quel compteur
+ * Utile pour les véhicules et drivers qui impactent l'org globale
+ */
+@Transactional
+public Mono<Void> updateResourceCounter(UUID orgId, String resourceType, int increment) {
+    return organizationRepository.findById(orgId)
+        .flatMap(org -> {
+            switch (resourceType.toUpperCase()) {
+                case "VEHICLE" -> org.setCurrentVehicles(org.getCurrentVehicles() + increment);
+                case "DRIVER" -> org.setCurrentDrivers(org.getCurrentDrivers() + increment);
+            }
+            return organizationRepository.save(org);
+        }).then();
+}
 }

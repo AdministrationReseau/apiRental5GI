@@ -180,7 +180,7 @@
                                  constraintName="fk_org_sub_plan" referencedTableName="subscription_plans" 
                                  referencedColumnNames="id"/>
     </changeSet>
-    <changeSet id="7" author="brayanne">
+    <changeSet id="7-create-medias-table" author="brayanne">
         <createTable tableName="medias">
             <column name="id" type="UUID">
                 <constraints primaryKey="true" nullable="false"/>
@@ -198,5 +198,60 @@
         </createTable>
     </changeSet>
 
+    <changeSet id="8-create-agencies-table" author="brayan">
+        <createTable tableName="agencies">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="organization_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_agency_org" referencedTableName="organizations" referencedColumnNames="id"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="TEXT"/>
+            
+            <!-- Location -->
+            <column name="address" type="VARCHAR(255)"/>
+            <column name="city" type="VARCHAR(100)"/>
+            <column name="country" type="VARCHAR(100)" defaultValue="CM"/>
+            <column name="postal_code" type="VARCHAR(20)"/>
+            <column name="region" type="VARCHAR(100)"/>
+            <column name="latitude" type="DOUBLE PRECISION"/>
+            <column name="longitude" type="DOUBLE PRECISION"/>
+            <column name="geofence_radius" type="DOUBLE PRECISION" defaultValue="500"/>
+
+            <!-- Contact -->
+            <column name="email" type="VARCHAR(255)"/>
+            <column name="phone" type="VARCHAR(50)"/>
+            <column name="manager_id" type="UUID"/>
+
+            <!-- Config -->
+            <column name="is24_hours" type="BOOLEAN" defaultValue="false"/>
+            <column name="timezone" type="VARCHAR(50)" defaultValue="Africa/Douala"/>
+            <column name="currency" type="VARCHAR(10)" defaultValue="XAF"/>
+            <column name="language" type="VARCHAR(10)" defaultValue="fr"/>
+            <column name="working_hours" type="TEXT"/>
+            <column name="allow_online_booking" type="BOOLEAN" defaultValue="true"/>
+            <column name="require_deposit" type="BOOLEAN" defaultValue="true"/>
+            <column name="deposit_percentage" type="DOUBLE PRECISION" defaultValue="30.0"/>
+            <column name="min_rental_hours" type="INTEGER" defaultValue="1"/>
+            <column name="max_advance_booking_days" type="INTEGER" defaultValue="30"/>
+
+            <!-- Design -->
+            <column name="logo_url" type="VARCHAR(255)"/>
+            <column name="primary_color" type="VARCHAR(10)" defaultValue="#3b82f6"/>
+            <column name="secondary_color" type="VARCHAR(10)" defaultValue="#1e40af"/>
+
+            <!-- Metrics -->
+            <column name="active_vehicles" type="INTEGER" defaultValue="0"/>
+            <column name="total_vehicles" type="INTEGER" defaultValue="0"/>
+            <column name="active_drivers" type="INTEGER" defaultValue="0"/>
+            <column name="total_drivers" type="INTEGER" defaultValue="0"/>
+            <column name="total_personnel" type="INTEGER" defaultValue="0"/>
+            <column name="total_rentals" type="INTEGER" defaultValue="0"/>
+            <column name="monthly_revenue" type="DOUBLE PRECISION" defaultValue="0.0"/>
+        </createTable>
+    </changeSet>
 
 </databaseChangeLog>

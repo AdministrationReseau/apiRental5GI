@@ -1,5 +1,5 @@
 ﻿# Contexte du Projet : Fleet & Geofence API
-GÃ©nÃ©rÃ© le : 12/27/2025 13:47:25
+GÃ©nÃ©rÃ© le : 12/27/2025 18:21:49
 Framework : Spring Boot WebFlux (Reactive)
 
 ## 1. Arborescence du Projet
@@ -65,6 +65,29 @@ D:.
 ª   ª   ª               ª   ª   ª       
 ª   ª   ª               ª   ª   +---services
 ª   ª   ª               ª   ª           AuthService.java
+ª   ª   ª               ª   ª           
+ª   ª   ª               ª   +---drivers
+ª   ª   ª               ª   ª   +---api
+ª   ª   ª               ª   ª   +---dto
+ª   ª   ª               ª   ª   +---listener
+ª   ª   ª               ª   ª   +---mapper
+ª   ª   ª               ª   ª   +---repository
+ª   ª   ª               ª   ª   +---services
+ª   ª   ª               ª   +---media
+ª   ª   ª               ª   ª   +---api
+ª   ª   ª               ª   ª   ª       MediaController.java
+ª   ª   ª               ª   ª   ª       
+ª   ª   ª               ª   ª   +---config
+ª   ª   ª               ª   ª   ª       MediaWebConfig.java
+ª   ª   ª               ª   ª   ª       
+ª   ª   ª               ª   ª   +---domain
+ª   ª   ª               ª   ª   ª       MediaEntity.java
+ª   ª   ª               ª   ª   ª       
+ª   ª   ª               ª   ª   +---repository
+ª   ª   ª               ª   ª   ª       MediaRepository.java
+ª   ª   ª               ª   ª   ª       
+ª   ª   ª               ª   ª   +---services
+ª   ª   ª               ª   ª           MediaService.java
 ª   ª   ª               ª   ª           
 ª   ª   ª               ª   +---organization
 ª   ª   ª               ª   ª   +---api
@@ -147,137 +170,164 @@ D:.
 ª                   +---apirental
 ª                           ApirentalApplicationTests.java
 ª                           
-    +---classes
-    ª   ª   .env.example
-    ª   ª   application.properties
-    ª   ª   
-    ª   +---com
-    ª   ª   +---project
-    ª   ª       +---apirental
-    ª   ª           ª   ApirentalApplication.class
-    ª   ª           ª   
-    ª   ª           +---config
-    ª   ª           ª       OpenApiConfig.class
-    ª   ª           ª       SecurityConfig.class
-    ª   ª           ª       
-    ª   ª           +---modules
-    ª   ª           ª   ª   explication.md
-    ª   ª           ª   ª   
-    ª   ª           ª   +---audit
-    ª   ª           ª   ª   +---domain
-    ª   ª           ª   ª   ª       AuditEntity.class
-    ª   ª           ª   ª   ª       
-    ª   ª           ª   ª   +---listener
-    ª   ª           ª   ª   ª       AuditListener.class
-    ª   ª           ª   ª   ª       
-    ª   ª           ª   ª   +---repository
-    ª   ª           ª   ª           AuditRepository.class
-    ª   ª           ª   ª           
-    ª   ª           ª   +---auth
-    ª   ª           ª   ª   +---api
-    ª   ª           ª   ª   ª       AuthController.class
-    ª   ª           ª   ª   ª       
-    ª   ª           ª   ª   +---domain
-    ª   ª           ª   ª   ª       UserEntity.class
-    ª   ª           ª   ª   ª       
-    ª   ª           ª   ª   +---dto
-    ª   ª           ª   ª   ª       AuthResponse.class
-    ª   ª           ª   ª   ª       LoginRequest.class
-    ª   ª           ª   ª   ª       RegisterRequest.class
-    ª   ª           ª   ª   ª       
-    ª   ª           ª   ª   +---listener
-    ª   ª           ª   ª   ª       explication.md
-    ª   ª           ª   ª   ª       
-    ª   ª           ª   ª   +---mapper
-    ª   ª           ª   ª   ª       UserMapper.class
-    ª   ª           ª   ª   ª       
-    ª   ª           ª   ª   +---repository
-    ª   ª           ª   ª   ª       UserRepository.class
-    ª   ª           ª   ª   ª       
-    ª   ª           ª   ª   +---services
-    ª   ª           ª   ª           AuthService.class
-    ª   ª           ª   ª           
-    ª   ª           ª   +---organization
-    ª   ª           ª   ª   +---api
-    ª   ª           ª   ª   ª       OrganizationController.class
-    ª   ª           ª   ª   ª       
-    ª   ª           ª   ª   +---domain
-    ª   ª           ª   ª   ª       OrganizationEntity.class
-    ª   ª           ª   ª   ª       
-    ª   ª           ª   ª   +---dto
-    ª   ª           ª   ª   ª       OrgRegisterRequest.class
-    ª   ª           ª   ª   ª       OrgResponseDTO.class
-    ª   ª           ª   ª   ª       OrgUpdateDTO.class
-    ª   ª           ª   ª   ª       
-    ª   ª           ª   ª   +---mapper
-    ª   ª           ª   ª   ª       OrgMapper.class
-    ª   ª           ª   ª   ª       
-    ª   ª           ª   ª   +---repository
-    ª   ª           ª   ª   ª       OrganizationRepository.class
-    ª   ª           ª   ª   ª       
-    ª   ª           ª   ª   +---services
-    ª   ª           ª   ª           OrganizationService.class
-    ª   ª           ª   ª           
-    ª   ª           ª   +---subscription
-    ª   ª           ª       +---api
-    ª   ª           ª       ª       SubscriptionController.class
-    ª   ª           ª       ª       
-    ª   ª           ª       +---domain
-    ª   ª           ª       ª       PlanType.class
-    ª   ª           ª       ª       SubscriptionEntity.class
-    ª   ª           ª       ª       SubscriptionPlanEntity.class
-    ª   ª           ª       ª       
-    ª   ª           ª       +---dto
-    ª   ª           ª       ª       PlanUpgradeRequest.class
-    ª   ª           ª       ª       SubscriptionRemainingTimeDTO.class
-    ª   ª           ª       ª       SubscriptionResponseDTO.class
-    ª   ª           ª       ª       
-    ª   ª           ª       +---listener
-    ª   ª           ª       ª       SubscriptionListener.class
-    ª   ª           ª       ª       
-    ª   ª           ª       +---mapper
-    ª   ª           ª       ª       SubscriptionMapper.class
-    ª   ª           ª       ª       
-    ª   ª           ª       +---repository
-    ª   ª           ª       ª       SubscriptionPlanRepository.class
-    ª   ª           ª       ª       SubscriptionRepository.class
-    ª   ª           ª       ª       
-    ª   ª           ª       +---services
-    ª   ª           ª               PaymentService.class
-    ª   ª           ª               SubscriptionService.class
-    ª   ª           ª               
-    ª   ª           +---shared
-    ª   ª               +---config
-    ª   ª               ª       CorsConfig.class
-    ª   ª               ª       
-    ª   ª               +---events
-    ª   ª               ª       AuditEvent.class
-    ª   ª               ª       
-    ª   ª               +---exceptions
-    ª   ª               ª       GlobalExceptionHandler$ErrorResponse.class
-    ª   ª               ª       GlobalExceptionHandler.class
-    ª   ª               ª       
-    ª   ª               +---security
-    ª   ª               ª       JwtAuthenticationFilter.class
-    ª   ª               ª       JwtUtil.class
-    ª   ª               ª       
-    ª   ª               +---utils
-    ª   ª                       explication.md
-    ª   ª                       
-    ª   +---db
-    ª       +---changelog
-    ª               db.changelog-master.xml
-    ª               
-    +---generated-sources
-    ª   +---annotations
-    +---generated-test-sources
-    ª   +---test-annotations
-    +---test-classes
-        +---com
-            +---project
-                +---apirental
-                        ApirentalApplicationTests.class
-                        
+ª   +---classes
+ª   ª   ª   .env.example
+ª   ª   ª   application.properties
+ª   ª   ª   
+ª   ª   +---com
+ª   ª   ª   +---project
+ª   ª   ª       +---apirental
+ª   ª   ª           ª   ApirentalApplication.class
+ª   ª   ª           ª   
+ª   ª   ª           +---config
+ª   ª   ª           ª       OpenApiConfig.class
+ª   ª   ª           ª       SecurityConfig.class
+ª   ª   ª           ª       
+ª   ª   ª           +---modules
+ª   ª   ª           ª   ª   explication.md
+ª   ª   ª           ª   ª   
+ª   ª   ª           ª   +---audit
+ª   ª   ª           ª   ª   +---domain
+ª   ª   ª           ª   ª   ª       AuditEntity.class
+ª   ª   ª           ª   ª   ª       
+ª   ª   ª           ª   ª   +---listener
+ª   ª   ª           ª   ª   ª       AuditListener.class
+ª   ª   ª           ª   ª   ª       
+ª   ª   ª           ª   ª   +---repository
+ª   ª   ª           ª   ª           AuditRepository.class
+ª   ª   ª           ª   ª           
+ª   ª   ª           ª   +---auth
+ª   ª   ª           ª   ª   +---api
+ª   ª   ª           ª   ª   ª       AuthController.class
+ª   ª   ª           ª   ª   ª       
+ª   ª   ª           ª   ª   +---domain
+ª   ª   ª           ª   ª   ª       UserEntity.class
+ª   ª   ª           ª   ª   ª       
+ª   ª   ª           ª   ª   +---dto
+ª   ª   ª           ª   ª   ª       AuthResponse.class
+ª   ª   ª           ª   ª   ª       LoginRequest.class
+ª   ª   ª           ª   ª   ª       RegisterRequest.class
+ª   ª   ª           ª   ª   ª       
+ª   ª   ª           ª   ª   +---listener
+ª   ª   ª           ª   ª   ª       explication.md
+ª   ª   ª           ª   ª   ª       
+ª   ª   ª           ª   ª   +---mapper
+ª   ª   ª           ª   ª   ª       UserMapper.class
+ª   ª   ª           ª   ª   ª       
+ª   ª   ª           ª   ª   +---repository
+ª   ª   ª           ª   ª   ª       UserRepository.class
+ª   ª   ª           ª   ª   ª       
+ª   ª   ª           ª   ª   +---services
+ª   ª   ª           ª   ª           AuthService.class
+ª   ª   ª           ª   ª           
+ª   ª   ª           ª   +---drivers
+ª   ª   ª           ª   ª   +---api
+ª   ª   ª           ª   ª   +---dto
+ª   ª   ª           ª   ª   +---listener
+ª   ª   ª           ª   ª   +---mapper
+ª   ª   ª           ª   ª   +---repository
+ª   ª   ª           ª   ª   +---services
+ª   ª   ª           ª   +---media
+ª   ª   ª           ª   ª   +---api
+ª   ª   ª           ª   ª   ª       MediaController$MediaResponse.class
+ª   ª   ª           ª   ª   ª       MediaController.class
+ª   ª   ª           ª   ª   ª       
+ª   ª   ª           ª   ª   +---config
+ª   ª   ª           ª   ª   ª       MediaWebConfig.class
+ª   ª   ª           ª   ª   ª       
+ª   ª   ª           ª   ª   +---domain
+ª   ª   ª           ª   ª   ª       MediaEntity.class
+ª   ª   ª           ª   ª   ª       
+ª   ª   ª           ª   ª   +---repository
+ª   ª   ª           ª   ª   ª       MediaRepository.class
+ª   ª   ª           ª   ª   ª       
+ª   ª   ª           ª   ª   +---services
+ª   ª   ª           ª   ª           MediaService.class
+ª   ª   ª           ª   ª           
+ª   ª   ª           ª   +---organization
+ª   ª   ª           ª   ª   +---api
+ª   ª   ª           ª   ª   ª       OrganizationController.class
+ª   ª   ª           ª   ª   ª       
+ª   ª   ª           ª   ª   +---domain
+ª   ª   ª           ª   ª   ª       OrganizationEntity.class
+ª   ª   ª           ª   ª   ª       
+ª   ª   ª           ª   ª   +---dto
+ª   ª   ª           ª   ª   ª       OrgRegisterRequest.class
+ª   ª   ª           ª   ª   ª       OrgResponseDTO.class
+ª   ª   ª           ª   ª   ª       OrgUpdateDTO.class
+ª   ª   ª           ª   ª   ª       
+ª   ª   ª           ª   ª   +---mapper
+ª   ª   ª           ª   ª   ª       OrgMapper.class
+ª   ª   ª           ª   ª   ª       
+ª   ª   ª           ª   ª   +---repository
+ª   ª   ª           ª   ª   ª       OrganizationRepository.class
+ª   ª   ª           ª   ª   ª       
+ª   ª   ª           ª   ª   +---services
+ª   ª   ª           ª   ª           OrganizationService.class
+ª   ª   ª           ª   ª           
+ª   ª   ª           ª   +---subscription
+ª   ª   ª           ª       +---api
+ª   ª   ª           ª       ª       SubscriptionController.class
+ª   ª   ª           ª       ª       
+ª   ª   ª           ª       +---domain
+ª   ª   ª           ª       ª       PlanType.class
+ª   ª   ª           ª       ª       SubscriptionEntity.class
+ª   ª   ª           ª       ª       SubscriptionPlanEntity.class
+ª   ª   ª           ª       ª       
+ª   ª   ª           ª       +---dto
+ª   ª   ª           ª       ª       PlanUpgradeRequest.class
+ª   ª   ª           ª       ª       SubscriptionRemainingTimeDTO.class
+ª   ª   ª           ª       ª       SubscriptionResponseDTO.class
+ª   ª   ª           ª       ª       
+ª   ª   ª           ª       +---listener
+ª   ª   ª           ª       ª       SubscriptionListener.class
+ª   ª   ª           ª       ª       
+ª   ª   ª           ª       +---mapper
+ª   ª   ª           ª       ª       SubscriptionMapper.class
+ª   ª   ª           ª       ª       
+ª   ª   ª           ª       +---repository
+ª   ª   ª           ª       ª       SubscriptionPlanRepository.class
+ª   ª   ª           ª       ª       SubscriptionRepository.class
+ª   ª   ª           ª       ª       
+ª   ª   ª           ª       +---services
+ª   ª   ª           ª               PaymentService.class
+ª   ª   ª           ª               SubscriptionService.class
+ª   ª   ª           ª               
+ª   ª   ª           +---shared
+ª   ª   ª               +---config
+ª   ª   ª               ª       CorsConfig.class
+ª   ª   ª               ª       
+ª   ª   ª               +---events
+ª   ª   ª               ª       AuditEvent.class
+ª   ª   ª               ª       
+ª   ª   ª               +---exceptions
+ª   ª   ª               ª       GlobalExceptionHandler$ErrorResponse.class
+ª   ª   ª               ª       GlobalExceptionHandler.class
+ª   ª   ª               ª       
+ª   ª   ª               +---security
+ª   ª   ª               ª       JwtAuthenticationFilter.class
+ª   ª   ª               ª       JwtUtil.class
+ª   ª   ª               ª       
+ª   ª   ª               +---utils
+ª   ª   ª                       explication.md
+ª   ª   ª                       
+ª   ª   +---db
+ª   ª       +---changelog
+ª   ª               db.changelog-master.xml
+ª   ª               
+ª   +---generated-sources
+ª   ª   +---annotations
+ª   +---generated-test-sources
+ª   ª   +---test-annotations
+ª   +---test-classes
+ª       +---com
+ª           +---project
+ª               +---apirental
+ª                       ApirentalApplicationTests.class
+ª                       
++---uploads
+        hzm_0c11eb35.md
+        
 
 
 ## 2. Contenu des Fichiers
@@ -487,7 +537,7 @@ public class OpenApiConfig {
     public GroupedOpenApi authApi() {
         return GroupedOpenApi.builder()
                 .group("1-authentification")
-                .pathsToMatch("/auth/**")
+                .pathsToMatch("/auth/**", "/api/media/**")
                 .build();
     }
 
@@ -542,6 +592,7 @@ public class SecurityConfig {
                         .pathMatchers("/api/subscriptions/plans/**").permitAll()
                         .pathMatchers(HttpMethod.PUT, "/api/subscriptions/plans/**").hasRole("ADMIN")
                         .pathMatchers("/api/org/**").hasRole("ORGANIZATION")
+                        .pathMatchers("/uploads/**").permitAll()
                         .anyExchange().authenticated()
                 )
                 .exceptionHandling(exceptionHandlingSpec -> exceptionHandlingSpec
@@ -839,15 +890,19 @@ import com.project.apirental.modules.organization.dto.OrgRegisterRequest;
 import com.project.apirental.modules.auth.repository.UserRepository;
 import com.project.apirental.modules.organization.domain.OrganizationEntity;
 import com.project.apirental.modules.organization.repository.OrganizationRepository;
+import com.project.apirental.modules.subscription.domain.SubscriptionEntity;
 import com.project.apirental.modules.subscription.repository.SubscriptionPlanRepository;
+import com.project.apirental.modules.subscription.repository.SubscriptionRepository;
 import com.project.apirental.modules.subscription.services.SubscriptionService;
 import com.project.apirental.shared.events.AuditEvent;
 import com.project.apirental.shared.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.repository.reactive.ReactiveCrudRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -860,7 +915,8 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final OrganizationRepository orgRepository;
-    private final SubscriptionPlanRepository planRepository; // AjoutÃ©
+    private final SubscriptionPlanRepository planRepository; 
+    private final SubscriptionRepository subscriptionRepository;
     private final SubscriptionService subscriptionService;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
@@ -959,12 +1015,255 @@ public class AuthService {
                                         .build();
 
                                 return orgRepository.save(org)
+                                        .flatMap(savedOrg -> 
+                                            // 4.APPEL AU SERVICE : Remplir la table subscriptions (historique)
+                                            subscriptionService.createHistoryRecord(savedOrg.getId(), freePlan.getName(), null)
+                                                .thenReturn(savedOrg) // On retourne l'organisation finale
+                                        )
                                         .doOnSuccess(o -> eventPublisher.publishEvent(
                                             new AuditEvent("REGISTER_ORG", "AUTH", "New Org: " + o.getName() + " with plan FREE")
                                         ));
                             });
                         })
                 ));
+    }
+
+  
+}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\media\api\MediaController.java
+`$ext
+package com.project.apirental.modules.media.api;
+
+import com.project.apirental.modules.media.services.MediaService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.codec.multipart.FilePart;
+import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Mono;
+
+@RestController
+@RequestMapping("/api/media")
+@RequiredArgsConstructor
+@Tag(name = "Media Management", description = "Upload de fichiers pour Clients et Organisations")
+@SecurityRequirement(name = "bearerAuth")
+public class MediaController {
+
+    private final MediaService mediaService;
+
+    @Operation(summary = "Upload d'un fichier (Image, Doc, etc.)")
+    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public Mono<ResponseEntity<MediaResponse>> upload(@RequestPart("file") FilePart file) {
+        return mediaService.uploadFile(file)
+                .map(media -> ResponseEntity.ok(new MediaResponse(media.getFileUrl(), media.getFilename())));
+    }
+
+    // DTO simple pour la rÃ©ponse
+    public record MediaResponse(String url, String filename) {}
+}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\media\config\MediaWebConfig.java
+`$ext
+package com.project.apirental.modules.media.config;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.CacheControl;
+import org.springframework.web.reactive.config.ResourceHandlerRegistry;
+import org.springframework.web.reactive.config.WebFluxConfigurer;
+
+import java.nio.file.Paths;
+import java.util.concurrent.TimeUnit;
+
+@Configuration
+public class MediaWebConfig implements WebFluxConfigurer {
+
+    @Value("${application.file.upload-dir:uploads}")
+    private String uploadDir;
+
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        // Expose le dossier local "uploads" via l'URL "/uploads/**"
+        String absolutePath = Paths.get(uploadDir).toAbsolutePath().toUri().toString();
+
+        registry.addResourceHandler("/uploads/**")
+                .addResourceLocations(absolutePath)
+                .setCacheControl(CacheControl.maxAge(365, TimeUnit.DAYS));
+    }
+}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\media\domain\MediaEntity.java
+`$ext
+package com.project.apirental.modules.media.domain;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
+import org.springframework.data.domain.Persistable;
+import org.springframework.data.relational.core.mapping.Table;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@Table("medias")
+public class MediaEntity implements Persistable<UUID> {
+
+    @Id
+    private UUID id;
+    private String filename;
+    private String originalFilename;
+    private String fileType;
+    private String fileUrl;
+    private UUID uploaderId;
+    private LocalDateTime createdAt;
+
+    @Transient
+    @Builder.Default
+    private boolean isNewRecord = false;
+
+    @Override
+    @Transient
+    public boolean isNew() {
+        return isNewRecord || id == null;
+    }
+}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\media\repository\MediaRepository.java
+`$ext
+package com.project.apirental.modules.media.repository;
+
+import com.project.apirental.modules.media.domain.MediaEntity;
+import org.springframework.data.r2dbc.repository.R2dbcRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.UUID;
+
+@Repository
+public interface MediaRepository extends R2dbcRepository<MediaEntity, UUID> {
+}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\media\services\MediaService.java
+`$ext
+package com.project.apirental.modules.media.services;
+
+import com.project.apirental.modules.auth.repository.UserRepository;
+import com.project.apirental.modules.media.domain.MediaEntity;
+import com.project.apirental.modules.media.repository.MediaRepository;
+import com.project.apirental.modules.organization.repository.OrganizationRepository;
+import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.codec.multipart.FilePart;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
+import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class MediaService {
+
+    @Value("${application.file.upload-dir:uploads}")
+    private String uploadDir;
+
+    // UtilisÃ© pour construire l'URL complÃ¨te si besoin, sinon on renvoie le chemin relatif
+    @Value("${application.base-url:http://localhost:8080}")
+    private String baseUrl;
+
+    private final MediaRepository mediaRepository;
+    private final UserRepository userRepository;
+    private final OrganizationRepository organizationRepository;
+
+    // CrÃ©e le dossier au dÃ©marrage si inexistant
+    @PostConstruct
+    public void init() {
+        try {
+            Files.createDirectories(Paths.get(uploadDir));
+        } catch (Exception e) {
+            throw new RuntimeException("Impossible de crÃ©er le dossier d'upload", e);
+        }
+    }
+
+    public Mono<MediaEntity> uploadFile(FilePart filePart) {
+        return ReactiveSecurityContextHolder.getContext()
+                .map(ctx -> ctx.getAuthentication().getName()) // RÃ©cupÃ¨re l'email
+                .flatMap(email -> userRepository.findByEmail(email))
+                .flatMap(user -> {
+                    // Logique de nommage
+                    Mono<String> prefixMono;
+
+                    if ("ORGANIZATION".equals(user.getRole())) {
+                        // Si c'est une ORG, on cherche son nom
+                        prefixMono = organizationRepository.findByOwnerId(user.getId()) // MÃ©thode Ã  ajouter dans OrgRepo*
+                                .map(org -> sanitizeFilename(org.getName()))
+                                .defaultIfEmpty("org_" + user.getId());
+                    } else {
+                        // Si c'est un CLIENT, on utilise son ID ou nom
+                        prefixMono = Mono.just("user_" + sanitizeFilename(user.getLastname()));
+                    }
+
+                    return prefixMono.flatMap(prefix -> {
+                        // Construction du nom unique
+                        String extension = getFileExtension(filePart.filename());
+                        String uniqueName = prefix + "_" + UUID.randomUUID().toString().substring(0, 8) + extension;
+                        Path destinationFile = Paths.get(uploadDir).resolve(uniqueName).toAbsolutePath();
+
+                        // URL Publique
+                        String publicUrl = baseUrl + "/uploads/" + uniqueName;
+
+                        // Sauvegarde physique + Base de donnÃ©es
+                        return filePart.transferTo(destinationFile)
+                                .then(saveMediaEntity(filePart, uniqueName, publicUrl, user.getId()));
+                    });
+                });
+    }
+
+    private Mono<MediaEntity> saveMediaEntity(FilePart filePart, String filename, String url, UUID uploaderId) {
+        MediaEntity media = MediaEntity.builder()
+                .id(UUID.randomUUID())
+                .filename(filename)
+                .originalFilename(filePart.filename())
+                .fileType(filePart.headers().getContentType() != null ? filePart.headers().getContentType().toString() : "application/octet-stream")
+                .fileUrl(url)
+                .uploaderId(uploaderId)
+                .createdAt(LocalDateTime.now())
+                .isNewRecord(true)
+                .build();
+
+        return mediaRepository.save(media);
+    }
+
+    // Utilitaires
+    private String sanitizeFilename(String input) {
+        return input.replaceAll("[^a-zA-Z0-9]", "_").toLowerCase();
+    }
+
+    private String getFileExtension(String filename) {
+        int lastDotIndex = filename.lastIndexOf(".");
+        return (lastDotIndex != -1) ? filename.substring(lastDotIndex) : "";
     }
 }
 
@@ -1281,6 +1580,7 @@ package com.project.apirental.modules.organization.repository;
 import com.project.apirental.modules.organization.domain.OrganizationEntity;
 
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.util.UUID;
 
@@ -1288,6 +1588,7 @@ import org.springframework.data.r2dbc.repository.R2dbcRepository;
 
 public interface OrganizationRepository extends R2dbcRepository<OrganizationEntity, UUID> {
     Flux<OrganizationEntity> findAllBySubscriptionPlanId(UUID subscriptionPlanId);
+    Mono<OrganizationEntity> findByOwnerId(UUID ownerId);
 }
 
 ---
@@ -1445,11 +1746,12 @@ import org.springframework.data.relational.core.mapping.Table;
 
 import java.util.UUID;
 import java.time.LocalDateTime;
+
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table("subscriptions") // CORRECTION : Doit pointer vers subscriptions
+@Table("subscriptions") // FIX : Pointer vers la table d'historique
 public class SubscriptionEntity implements Persistable<UUID> {
     @Id
     private UUID id;
@@ -1712,8 +2014,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
- import java.time.Duration;
-
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -1723,64 +2024,52 @@ import java.util.UUID;
 public class SubscriptionService {
 
     private final SubscriptionPlanRepository planRepository;
-    private final SubscriptionRepository subscriptionRepository;
+    private final SubscriptionRepository subscriptionRepository; // FIX : Utiliser le bon type ici
     private final OrganizationRepository organizationRepository;
     private final PaymentService paymentService;
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
-    public Mono<OrganizationEntity> checkAndDowngrade(OrganizationEntity org) {
-        if (org.getSubscriptionExpiresAt() != null && org.getSubscriptionExpiresAt().isBefore(LocalDateTime.now())) {
-            return planRepository.findByName("FREE")
-                    .flatMap(freePlan -> {
-                        org.setSubscriptionPlanId(freePlan.getId());
-                        org.setSubscriptionExpiresAt(null);
-                        return organizationRepository.save(org);
-                    })
-                    .doOnSuccess(s -> eventPublisher.publishEvent(new AuditEvent("AUTO_DOWNGRADE", "SUBSCRIPTION", "Org " + org.getId() + " reverted to FREE")));
-        }
-        return Mono.just(org);
-    }
-
-    @Transactional
     public Mono<Void> initializeDefaultSubscription(UUID organizationId) {
         return planRepository.findByName("FREE")
-                .switchIfEmpty(Mono.error(new RuntimeException("Erreur critique : Le plan FREE n'est pas configurÃ© en base de donnÃ©es.")))
+                .switchIfEmpty(Mono.error(new RuntimeException("Plan FREE non configurÃ©")))
                 .flatMap(plan -> organizationRepository.findById(organizationId)
                         .flatMap(org -> {
                             // 1. Mise Ã  jour de l'Ã©tat de l'organisation
                             org.setSubscriptionPlanId(plan.getId());
-                            org.setSubscriptionExpiresAt(null); // FREE est Ã  vie
+                            org.setSubscriptionExpiresAt(null);
                             org.setSubscriptionAutoRenew(true);
 
-                            // 2. CrÃ©ation de l'enregistrement historique (Contrat)
+                            // 2. CrÃ©ation de l'enregistrement historique
                             SubscriptionEntity subRecord = SubscriptionEntity.builder()
                                     .id(UUID.randomUUID())
                                     .organizationId(organizationId)
                                     .planType(plan.getName())
                                     .status("ACTIVE")
                                     .startDate(LocalDateTime.now())
-                                    .isNewRecord(true) // IMPORTANT pour l'INSERT
+                                    .isNewRecord(true)
                                     .build();
-                            // On chaÃ®ne les deux sauvegardes
+
+                            // 3. On chaÃ®ne les deux sauvegardes pour qu'elles s'exÃ©cutent
                             return organizationRepository.save(org)
-                            .then(subscriptionRepository.save(subRecord));
+                                    .then(subscriptionRepository.save(subRecord))
+                                    .doOnSuccess(s -> log.info("âœ… Historique de souscription crÃ©Ã© pour l'org {}", organizationId));
                         }))
-                .doOnSuccess(v -> log.info("âœ… Plan FREE assignÃ© Ã  l'organisation {}", organizationId))
-                .then(); // On retourne Mono<Void> pour indiquer la fin du traitement
+                .then();
     }
 
-     @Transactional
+    @Transactional
     public Mono<SubscriptionPlanEntity> upgradePlan(UUID organizationId, String planName) {
         return planRepository.findByName(planName)
                 .flatMap(plan -> organizationRepository.findById(organizationId)
                         .flatMap(org -> paymentService.processPayment(org.getEmail(), planName, plan.getPrice().doubleValue())
                                 .flatMap(success -> {
-                                    // Mise Ã  jour Org
+                                        // --- LOGIQUE DE TEST : 2 MINUTES AU LIEU DE 30 JOURS ---
+                                    LocalDateTime testExpiry = LocalDateTime.now().plusMinutes(2); 
                                     org.setSubscriptionPlanId(plan.getId());
-                                    org.setSubscriptionExpiresAt(LocalDateTime.now().plusDays(plan.getDurationDays()));
+                                     org.setSubscriptionExpiresAt(testExpiry);
+                                //     org.setSubscriptionExpiresAt(LocalDateTime.now().plusDays(plan.getDurationDays()));
                                     
-                                    // CrÃ©ation historique
                                     SubscriptionEntity subRecord = SubscriptionEntity.builder()
                                             .id(UUID.randomUUID())
                                             .organizationId(organizationId)
@@ -1797,33 +2086,55 @@ public class SubscriptionService {
                                 })));
     }
 
+    @Transactional
+    public Mono<OrganizationEntity> checkAndDowngrade(OrganizationEntity org) {
+        if (org.getSubscriptionExpiresAt() != null && org.getSubscriptionExpiresAt().isBefore(LocalDateTime.now())) {
+            return planRepository.findByName("FREE")
+                    .flatMap(freePlan -> {
+                        org.setSubscriptionPlanId(freePlan.getId());
+                        org.setSubscriptionExpiresAt(null);
+                        
+                        SubscriptionEntity history = SubscriptionEntity.builder()
+                                .id(UUID.randomUUID())
+                                .organizationId(org.getId())
+                                .planType("FREE")
+                                .status("AUTO_DOWNGRADE")
+                                .startDate(LocalDateTime.now())
+                                .isNewRecord(true)
+                                .build();
+
+                        return subscriptionRepository.save(history)
+                                .then(organizationRepository.save(org));
+                    });
+        }
+        return Mono.just(org);
+    }
 
     public Mono<SubscriptionRemainingTimeDTO> getRemainingTime(UUID orgId) {
         return organizationRepository.findById(orgId)
-                .switchIfEmpty(Mono.error(new RuntimeException("Organisation non trouvÃ©e")))
-                // On vÃ©rifie d'abord si le plan a expirÃ© pour Ãªtre Ã  jour
                 .flatMap(this::checkAndDowngrade)
                 .map(org -> {
                     if (org.getSubscriptionExpiresAt() == null) {
                         return new SubscriptionRemainingTimeDTO(0, 0, 0, "IllimitÃ© (Plan FREE)", true);
                     }
-
-                    LocalDateTime now = LocalDateTime.now();
-                    LocalDateTime expiry = org.getSubscriptionExpiresAt();
-
-                    if (expiry.isBefore(now)) {
-                        return new SubscriptionRemainingTimeDTO(0, 0, 0, "ExpirÃ©", false);
-                    }
-
-                    Duration duration = Duration.between(now, expiry);
-                    long days = duration.toDays();
-                    long hours = duration.toHoursPart();
-                    long minutes = duration.toMinutesPart();
-
-                    String formatted = String.format("%d jours, %d heures et %d minutes restantes", days, hours, minutes);
-
-                    return new SubscriptionRemainingTimeDTO(days, hours, minutes, formatted, false);
+                    Duration d = Duration.between(LocalDateTime.now(), org.getSubscriptionExpiresAt());
+                    return new SubscriptionRemainingTimeDTO(d.toDays(), d.toHoursPart(), d.toMinutesPart(), 
+                            d.toDays() + " jours restants", false);
                 });
+    }
+
+    public Mono<SubscriptionEntity> createHistoryRecord(UUID organizationId, String planName, LocalDateTime endDate) {
+        SubscriptionEntity history = SubscriptionEntity.builder()
+                .id(UUID.randomUUID())
+                .organizationId(organizationId)
+                .planType(planName)
+                .status("ACTIVE")
+                .startDate(LocalDateTime.now())
+                .endDate(endDate)
+                .isNewRecord(true)
+                .build();
+                
+        return subscriptionRepository.save(history);
     }
 }
 
@@ -2080,6 +2391,14 @@ spring.webflux.base-path=/
 jwt.secret=${JWT_SECRET:7KyhCtwGUvIoqcxTCabQGm3FJ/F6LfCy9nmOg3hy+WA=}
 jwt.expiration=86400000
 
+# ==============================================================
+# Configuration MEDIA
+# ==============================================================
+# Dossier oÃ¹ les fichiers seront stockÃ©s
+application.file.upload-dir=uploads
+# URL de base pour construire le lien public
+application.base-url=http://localhost:8080
+
 ---
 ### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\test\java\com\project\apirental\ApirentalApplicationTests.java
 `$ext
@@ -2096,4 +2415,162 @@ class ApirentalApplicationTests {
 	}
 
 }
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\uploads\hzm_0c11eb35.md
+`$ext
+# Service d'Authentification & RBAC (Auth Service)
+
+Ce projet est un microservice d'authentification robuste, sÃ©curisÃ© et prÃªt pour la production. Il implÃ©mente une gestion complÃ¨te des identitÃ©s avec **JWT (JSON Web Tokens)** et un contrÃ´le d'accÃ¨s basÃ© sur les rÃ´les (**RBAC**) et les permissions granulaires.
+
+Le projet est construit selon les principes de l'**Architecture Hexagonale (Ports & Adapters)** pour assurer une sÃ©paration stricte entre la logique mÃ©tier (Domaine) et les dÃ©tails techniques (Framework, Base de donnÃ©es, API).
+
+## ðŸš€ FonctionnalitÃ©s ClÃ©s
+
+- **Authentification Flexible** : Connexion via nom d'utilisateur, email ou numÃ©ro de tÃ©lÃ©phone.
+- **SÃ©curitÃ© JWT** :
+  - **Access Token** : DurÃ©e de vie courte (signÃ© HS256).
+  - **Refresh Token** : DurÃ©e de vie longue, stockÃ© en base de donnÃ©es.
+  - **Rotation des Refresh Tokens** : SÃ©curitÃ© accrue (un refresh token ne peut Ãªtre utilisÃ© qu'une seule fois).
+- **RBAC & Permissions** : Gestion fine des droits (ex: `ROLE_ADMIN` possÃ¨de `user:create`, `report:read`).
+- **Architecture Hexagonale** : Le cÅ“ur du mÃ©tier est isolÃ© de Spring Boot et de la BDD.
+- **Migrations de Base de DonnÃ©es** : Versionnage du schÃ©ma SQL via **Liquibase**.
+- **Documentation API** : IntÃ©gration native de **Swagger UI / OpenAPI**.
+- **Docker Ready** : Conteneurisation optimisÃ©e pour le dÃ©ploiement cloud.
+
+---
+
+## ðŸ›  Stack Technique
+
+- **Langage** : Java 21
+- **Framework** : Spring Boot 3.5.8
+- **SÃ©curitÃ©** : Spring Security 6, JJWT (Java JWT)
+- **Base de donnÃ©es** :  17
+- **ORM** : Spring Data JPA / Hibernate
+- **Migration** : Liquibase
+- **Documentation** : SpringDoc (Swagger UI)
+- **Build** : Maven
+
+---
+
+## ðŸ— Architecture du Projet
+
+Le projet suit une structure de dossiers reflÃ©tant l'architecture hexagonale :
+
+```text
+src/main/java/com/tramasys/auth
+â”œâ”€â”€ adapters
+â”‚   â”œâ”€â”€ in/web          # ContrÃ´leurs REST (Points d'entrÃ©e)
+â”‚   â””â”€â”€ out/persistence # ImplÃ©mentation des Repositories (JPA/SQL)
+â”œâ”€â”€ application
+â”‚   â”œâ”€â”€ dto             # Objets de transfert de donnÃ©es (Request/Response)
+â”‚   â””â”€â”€ service         # Orchestration des cas d'utilisation (Logique applicative)
+â”œâ”€â”€ config              # Configuration Spring (Security, Cors, Swagger)
+â”œâ”€â”€ domain
+â”‚   â”œâ”€â”€ exception       # Exceptions mÃ©tier
+â”‚   â”œâ”€â”€ model           # EntitÃ©s pures du domaine (User, Role, Token)
+â”‚   â””â”€â”€ port            # Interfaces (Ports In/Out) dÃ©finissant les contrats
+â””â”€â”€ util                # Utilitaires (JwtUtil, UserContext)
+```
+
+## ðŸ“– Documentation API (Swagger)
+
+Toute la documentation dÃ©taillÃ©e des endpoints (paramÃ¨tres, corps JSON, codes de rÃ©ponse) est gÃ©nÃ©rÃ©e automatiquement et accessible via une interface web interactive.
+Une fois l'application lancÃ©e, accÃ©dez Ã  :
+
+```bash
+http://localhost:8080/swagger-ui.html
+```
+
+### Comment tester dans Swagger ?
+
+- Utilisez l'endpoint POST /api/auth/login pour obtenir un token.
+- Copiez l'accessToken de la rÃ©ponse.
+- Cliquez sur le bouton Authorize (cadenas) en haut de la page Swagger.
+- Entrez le token sous la forme : Bearer VOTRE_TOKEN_ICI.
+- Vous pouvez maintenant tester les routes protÃ©gÃ©es (ex: /api/auth/me).
+
+## âš™ï¸ Installation et DÃ©marrage
+
+### PrÃ©requis
+
+- Java 21 (JDK)
+- PostgreSQL (Local ou Docker)
+- Maven (Le wrapper mvnw est inclus)
+
+### 1. Configuration de la Base de DonnÃ©es
+
+Assurez-vous d'avoir une instance PostgreSQL qui tourne.
+Par dÃ©faut, l'application attend :
+DB Name : authdb
+User : auth_user
+Password : auth_pass
+Pour lancer une BDD rapidement via Docker :
+
+```bash
+docker run --name auth-db -e POSTGRES_USER=auth_user -e POSTGRES_PASSWORD=auth_pass -e POSTGRES_DB=authdb -p 5432:5432 -d postgres:alpine
+```
+
+### 2. Lancement en local
+
+Clonez le projet et lancez-le via le wrapper Maven :
+
+```bash
+git clone https://github.com/votre-utilisateur/auth_service.git
+cd auth_service
+```
+
+# Compiler et lancer
+
+```bash
+./mvnw spring-boot:run
+```
+
+L'application sera accessible sur http://localhost:8080.
+
+## ðŸ³ DÃ©ploiement avec Docker
+
+Le projet inclut un Dockerfile optimisÃ© (Multi-stage build).
+
+### 1. Construire l'image
+
+```bash
+docker build -t auth-service .
+```
+
+### 2. Lancer le conteneur
+
+Vous pouvez surcharger les variables d'environnement au dÃ©marrage pour la production :
+
+```bash
+docker run -d -p 8080:8080 \
+  -e DB_USER=mon_user_prod \
+  -e DB_PASSWORD=mon_password_prod \
+  -e SPRING_DATASOURCE_URL=jdbc:postgresql://mon-serveur-db:5432/authdb \
+  -e AUTH_JWT_SECRET=MA_CLE_SECRETE_TRES_LONGUE_ET_SECURISEE \
+  --name auth-service-container \
+  auth-service
+```
+
+## ðŸ”‘ Variables d'Environnement
+
+Voici les variables clÃ©s Ã  configurer, notamment pour le dÃ©ploiement (DigitalOcean, AWS, etc.) :
+|Variable | Description | Valeur par dÃ©faut (Dev) |
+|---------|--------------|-------------------------|
+SPRING_DATASOURCE_URL | URL de connexion JDBC | jdbc:postgresql://localhost:5432/authdb |
+DB_USER | Utilisateur BDD | ROOT_USERNAME ("postgres" par dÃ©faut) |
+DB_PASSWORD | Mot de passe BDD | ROOT_PASSWORD |
+AUTH_JWT_SECRET | ClÃ© secrÃ¨te de signature (min 32 chars) | (Une clÃ© par dÃ©faut est fournie pour le dev) |
+SERVER_PORT | Port d'Ã©coute du serveur | 8080 |
+
+## ðŸ›¡ SÃ©curitÃ©
+
+Mots de passe : HachÃ©s avec BCrypt avant stockage.
+Stateless : Aucune session HTTP n'est stockÃ©e cÃ´tÃ© serveur.
+Protection CSRF : DÃ©sactivÃ©e (inutile pour une API REST stateless).
+CORS : Configurable via CorsConfig (par dÃ©faut permissif pour le dÃ©veloppement, Ã  restreindre en production).
+
+## ðŸ‘¤ Auteurs
+
+Projet dÃ©veloppÃ© par Brayan KUATE pour TraMaSys.
 

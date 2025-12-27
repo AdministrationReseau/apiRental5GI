@@ -6,14 +6,19 @@ import com.project.apirental.modules.organization.dto.OrgRegisterRequest;
 import com.project.apirental.modules.auth.repository.UserRepository;
 import com.project.apirental.modules.organization.domain.OrganizationEntity;
 import com.project.apirental.modules.organization.repository.OrganizationRepository;
+import com.project.apirental.modules.subscription.domain.SubscriptionEntity;
+import com.project.apirental.modules.subscription.repository.SubscriptionPlanRepository;
+import com.project.apirental.modules.subscription.repository.SubscriptionRepository;
 import com.project.apirental.modules.subscription.services.SubscriptionService;
 import com.project.apirental.shared.events.AuditEvent;
 import com.project.apirental.shared.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.repository.reactive.ReactiveCrudRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,7 +31,8 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final OrganizationRepository orgRepository;
-    
+    private final SubscriptionPlanRepository planRepository; 
+    private final SubscriptionRepository subscriptionRepository;
     private final SubscriptionService subscriptionService;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
@@ -89,40 +95,54 @@ public class AuthService {
     @Transactional
     public Mono<OrganizationEntity> registerOrganization(OrgRegisterRequest request) {
         return userRepository.findByEmail(request.email())
-                .flatMap(existing -> Mono.error(new RuntimeException("Email already exists")))
-                .switchIfEmpty(Mono.defer(() -> {
-                    // 1. Créer le User
-                    UserEntity user = UserEntity.builder()
-                            .id(UUID.randomUUID())
-                            .firstname(request.firstname())
-                            .lastname(request.lastname())
-                            .fullname(request.firstname() +" "+ request.lastname())
-                            .email(request.email())
-                            .password(passwordEncoder.encode(request.password()))
-                            .role("ORGANIZATION")
-                            .isNewRecord(true)
-                            .build();
+                .flatMap(existing -> Mono.<OrganizationEntity>error(new RuntimeException("Email already exists")))
+                .switchIfEmpty(Mono.defer(() -> 
+                    // 1. On cherche d'abord le plan FREE
+                    planRepository.findByName("FREE")
+                        .switchIfEmpty(Mono.error(new RuntimeException("Plan FREE non configuré en base")))
+                        .flatMap(freePlan -> {
+                            
+                            // 2. Créer le User
+                            UserEntity user = UserEntity.builder()
+                                    .id(UUID.randomUUID())
+                                    .firstname(request.firstname())
+                                    .lastname(request.lastname())
+                                    .fullname(request.firstname() + " " + request.lastname())
+                                    .email(request.email())
+                                    .password(passwordEncoder.encode(request.password()))
+                                    .role("ORGANIZATION")
+                                    .isNewRecord(true)
+                                    .build();
 
-                    return userRepository.save(user).flatMap(savedUser -> {
-                        // 2. Créer l'Organisation liée avec les valeurs par défaut
-                        OrganizationEntity org = OrganizationEntity.builder()
-                                .id(UUID.randomUUID())
-                                .name(request.orgName())
-                                .ownerId(savedUser.getId())
-                                .email(savedUser.getEmail()) // Email de contact par défaut = email du owner
-                                .country("CM") // Défaut
-                                .timezone("Africa/Douala") // Défaut
-                                .isVerified(false)
-                                .isNewRecord(true)
-                                .build();
-                        return orgRepository.save(org)
-                                .flatMap(savedOrg -> 
-                                    // 3. Créer la souscription FREE (Chaînage réactif)
-                                    subscriptionService.initializeDefaultSubscription(savedOrg.getId())
-                                        .thenReturn(savedOrg) // On retourne l'organisation pour le flux final
-                                )
-                                .doOnSuccess(o -> eventPublisher.publishEvent(new AuditEvent("REGISTER_ORG", "AUTH", "New Org: " + o.getName())));
-                    });
-                })).cast(OrganizationEntity.class);
+                            return userRepository.save(user).flatMap(savedUser -> {
+                                
+                                // 3. Créer l'Organisation AVEC le plan ID déjà présent
+                                OrganizationEntity org = OrganizationEntity.builder()
+                                        .id(UUID.randomUUID())
+                                        .name(request.orgName())
+                                        .ownerId(savedUser.getId())
+                                        .email(savedUser.getEmail())
+                                        .country("CM")
+                                        .timezone("Africa/Douala")
+                                        .subscriptionPlanId(freePlan.getId()) // <--- FIX : Injecté ici
+                                        .subscriptionAutoRenew(true)
+                                        .isVerified(false)
+                                        .isNewRecord(true)
+                                        .build();
+
+                                return orgRepository.save(org)
+                                        .flatMap(savedOrg -> 
+                                            // 4.APPEL AU SERVICE : Remplir la table subscriptions (historique)
+                                            subscriptionService.createHistoryRecord(savedOrg.getId(), freePlan.getName(), null)
+                                                .thenReturn(savedOrg) // On retourne l'organisation finale
+                                        )
+                                        .doOnSuccess(o -> eventPublisher.publishEvent(
+                                            new AuditEvent("REGISTER_ORG", "AUTH", "New Org: " + o.getName() + " with plan FREE")
+                                        ));
+                            });
+                        })
+                ));
     }
+
+  
 }

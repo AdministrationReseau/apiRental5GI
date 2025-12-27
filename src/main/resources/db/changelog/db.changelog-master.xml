@@ -82,7 +82,7 @@
             <column name="current_users" type="INT" defaultValueNumeric="0"/>
             <column name="timezone" type="VARCHAR(50)" defaultValue="Africa/Douala"/>
             <column name="logo_url" type="VARCHAR(500)"/>
-            <column name="subscription_plan_name" type="VARCHAR(50)"/>
+            <column name="subscription_plan_id" type="UUID"/>
             <column name="subscription_expires_at" type="TIMESTAMP"/>
             <column name="subscription_auto_renew" type="BOOLEAN" defaultValueBoolean="true"/>
             <column name="total_rentals" type="INT" defaultValueNumeric="0"/>
@@ -111,5 +111,74 @@
         </createTable>
     </changeSet>
 
+    <!-- 7. Table des Plans de Souscription (Le Catalogue) -->
+    <changeSet id="7-create-subscription-plans" author="hassana">
+        <createTable tableName="subscription_plans">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(50)">
+                <constraints unique="true" nullable="false"/>
+            </column>
+            <column name="description" type="TEXT"/>
+            <column name="price" type="DECIMAL(19,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="duration_days" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="max_vehicles" type="INTEGER"/>
+            <column name="max_drivers" type="INTEGER"/>
+            <column name="max_agencies" type="INTEGER"/>
+            <column name="max_users" type="INTEGER"/>
+            <column name="has_geofencing" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="has_chat" type="BOOLEAN" defaultValueBoolean="false"/>
+        </createTable>
+    </changeSet>
+
+     <!-- 8. Insertion des plans par défaut -->
+    <changeSet id="8-seed-subscription-plans" author="hassana">
+        <insert tableName="subscription_plans">
+            <column name="name" value="FREE"/>
+            <column name="description" value="Plan gratuit à vie"/>
+            <column name="price" valueNumeric="0.00"/>
+            <column name="duration_days" valueNumeric="0"/>
+            <column name="max_vehicles" valueNumeric="5"/>
+            <column name="max_drivers" valueNumeric="5"/>
+            <column name="max_agencies" valueNumeric="1"/>
+            <column name="max_users" valueNumeric="2"/>
+        </insert>
+        <insert tableName="subscription_plans">
+            <column name="name" value="PRO"/>
+            <column name="description" value="Plan professionnel 30 jours"/>
+            <column name="price" valueNumeric="10000.00"/>
+            <column name="duration_days" valueNumeric="30"/>
+            <column name="max_vehicles" valueNumeric="50"/>
+            <column name="max_drivers" valueNumeric="50"/>
+            <column name="max_agencies" valueNumeric="10"/>
+            <column name="max_users" valueNumeric="30"/>
+            <column name="has_geofencing" valueBoolean="true"/>
+            <column name="has_chat" valueBoolean="true"/>
+        </insert>
+        <insert tableName="subscription_plans">
+            <column name="name" value="ENTERPRISE"/>
+            <column name="description" value="Accès illimité à toutes les ressources (30 jours)"/>
+            <column name="price" valueNumeric="30000.00"/>
+            <column name="duration_days" valueNumeric="30"/>
+            <column name="max_vehicles" valueNumeric="999999"/>
+            <column name="max_drivers" valueNumeric="999999"/>
+            <column name="max_agencies" valueNumeric="999999"/>
+            <column name="max_users" valueNumeric="999999"/>
+            <column name="has_geofencing" valueBoolean="true"/>
+            <column name="has_chat" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- 9. Ajustement de la table Organizations pour pointer vers l'ID du plan -->
+    <changeSet id="9-update-org-subscription-link" author="hassana">
+        <addForeignKeyConstraint baseTableName="organizations" baseColumnNames="subscription_plan_id" 
+                                 constraintName="fk_org_sub_plan" referencedTableName="subscription_plans" 
+                                 referencedColumnNames="id"/>
+    </changeSet>
 
 </databaseChangeLog>

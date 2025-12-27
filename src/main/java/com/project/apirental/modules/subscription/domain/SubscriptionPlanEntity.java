@@ -7,22 +7,29 @@ import org.springframework.data.annotation.Transient;
 import org.springframework.data.domain.Persistable;
 import org.springframework.data.relational.core.mapping.Table;
 
+import java.math.BigDecimal;
 import java.util.UUID;
-import java.time.LocalDateTime;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table("subscriptions") // FIX : Pointer vers la table d'historique
-public class SubscriptionEntity implements Persistable<UUID> {
+@Table("subscription_plans")
+public class SubscriptionPlanEntity implements Persistable<UUID> {
     @Id
     private UUID id;
-    private UUID organizationId;
-    private String planType;
-    private String status;
-    private LocalDateTime startDate;
-    private LocalDateTime endDate;
+    private String name;
+    private String description;
+    private BigDecimal price;
+    private Integer durationDays;
+    private Integer maxVehicles;
+    private Integer maxDrivers;
+    private Integer maxAgencies;
+    private Integer maxUsers;
+    @Builder.Default
+    private Boolean hasGeofencing = false;
+    @Builder.Default
+    private Boolean hasChat = false;
 
     @Transient
     @Builder.Default

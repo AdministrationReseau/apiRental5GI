@@ -5,6 +5,13 @@ import com.project.apirental.modules.organization.dto.OrgUpdateDTO;
 import com.project.apirental.modules.organization.mapper.OrgMapper;
 import com.project.apirental.modules.organization.repository.OrganizationRepository;
 import com.project.apirental.modules.organization.services.OrganizationService;
+import com.project.apirental.modules.subscription.dto.PlanUpgradeRequest;
+import com.project.apirental.modules.subscription.dto.SubscriptionRemainingTimeDTO;
+import com.project.apirental.modules.subscription.dto.SubscriptionResponseDTO;
+import com.project.apirental.modules.subscription.mapper.SubscriptionMapper;
+import com.project.apirental.modules.subscription.repository.SubscriptionPlanRepository;
+import com.project.apirental.modules.subscription.services.SubscriptionService;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -30,6 +37,10 @@ public class OrganizationController {
     private final OrganizationRepository organizationRepository;
     private final OrgMapper orgMapper;
 
+     private final SubscriptionService subscriptionService;
+    private final SubscriptionPlanRepository planRepository;
+    private final SubscriptionMapper subscriptionMapper;
+
     @Operation(summary = "Obtenir les détails d'une organisation")
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('ORGANIZATION')") // Protection par Rôle
@@ -48,11 +59,41 @@ public class OrganizationController {
                 .map(ResponseEntity::ok);
     }
 
-    @Operation(summary = "Lister les organisations par nom de plan de souscription")
-    @GetMapping("/plan/{planName}")
+    @Operation(summary = "Lister les organisations par ID de plan de souscription")
+    @GetMapping("/plan/{planId}")
     @PreAuthorize("hasRole('ORGANIZATION')")
-    public Flux<OrgResponseDTO> getOrganizationsByPlan(@PathVariable String planName) {
-        return organizationRepository.findAllBySubscriptionPlanName(planName)
+    public Flux<OrgResponseDTO> getOrganizationsByPlan(@PathVariable UUID planId) {
+        return organizationRepository.findAllBySubscriptionPlanId(planId)
                 .map(orgMapper::toDto);
     }
+    @Operation(summary = "Statut de l'abonnement de cette organisation")
+    @GetMapping("/{id}/subscription")
+    @PreAuthorize("hasRole('ORGANIZATION')")
+    public Mono<ResponseEntity<SubscriptionResponseDTO>> getOrgSubscriptionStatus(@PathVariable UUID id) {
+        return organizationRepository.findById(id)
+                .flatMap(subscriptionService::checkAndDowngrade)
+                .flatMap(org -> planRepository.findById(org.getSubscriptionPlanId())
+                        .map(plan -> subscriptionMapper.toResponseDTO(org, plan)))
+                .map(ResponseEntity::ok);
+    }
+
+    @Operation(summary = "Temps restant avant expiration")
+    @GetMapping("/{id}/subscription/remaining")
+    @PreAuthorize("hasRole('ORGANIZATION')")
+    public Mono<ResponseEntity<SubscriptionRemainingTimeDTO>> getRemainingTime(@PathVariable UUID id) {
+        return subscriptionService.getRemainingTime(id).map(ResponseEntity::ok);
+    }
+
+    @Operation(summary = "Upgrade du plan de l'organisation")
+    @PutMapping("/{id}/subscription/upgrade")
+    @PreAuthorize("hasRole('ORGANIZATION')")
+    public Mono<ResponseEntity<SubscriptionResponseDTO>> upgradePlan(
+            @PathVariable UUID id,
+            @RequestBody PlanUpgradeRequest request) {
+        return subscriptionService.upgradePlan(id, request.newPlan().name())
+                .flatMap(updatedPlan -> organizationRepository.findById(id)
+                        .map(org -> subscriptionMapper.toResponseDTO(org, updatedPlan)))
+                .map(ResponseEntity::ok);
+    }
+
 }

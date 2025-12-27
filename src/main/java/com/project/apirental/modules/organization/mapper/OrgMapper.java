@@ -32,7 +32,7 @@ public class OrgMapper {
             entity.getCurrentDrivers(),
             entity.getTimezone(),
             entity.getLogoUrl(),
-            entity.getSubscriptionPlanName(),
+            entity.getSubscriptionPlanId(),
             entity.getSubscriptionExpiresAt(),
             entity.getTotalRentals(),
             entity.getMonthlyRevenue(),

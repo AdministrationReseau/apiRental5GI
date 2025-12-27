@@ -1,5 +1,5 @@
 ﻿# Contexte du Projet : Fleet & Geofence API
-GÃ©nÃ©rÃ© le : 12/27/2025 06:29:09
+GÃ©nÃ©rÃ© le : 12/27/2025 13:47:25
 Framework : Spring Boot WebFlux (Reactive)
 
 ## 1. Arborescence du Projet
@@ -94,9 +94,11 @@ D:.
 ª   ª   ª               ª       +---domain
 ª   ª   ª               ª       ª       PlanType.java
 ª   ª   ª               ª       ª       SubscriptionEntity.java
+ª   ª   ª               ª       ª       SubscriptionPlanEntity.java
 ª   ª   ª               ª       ª       
 ª   ª   ª               ª       +---dto
 ª   ª   ª               ª       ª       PlanUpgradeRequest.java
+ª   ª   ª               ª       ª       SubscriptionRemainingTimeDTO.java
 ª   ª   ª               ª       ª       SubscriptionResponseDTO.java
 ª   ª   ª               ª       ª       
 ª   ª   ª               ª       +---listener
@@ -106,6 +108,7 @@ D:.
 ª   ª   ª               ª       ª       SubscriptionMapper.java
 ª   ª   ª               ª       ª       
 ª   ª   ª               ª       +---repository
+ª   ª   ª               ª       ª       SubscriptionPlanRepository.java
 ª   ª   ª               ª       ª       SubscriptionRepository.java
 ª   ª   ª               ª       ª       
 ª   ª   ª               ª       +---services
@@ -222,9 +225,11 @@ D:.
     ª   ª           ª       +---domain
     ª   ª           ª       ª       PlanType.class
     ª   ª           ª       ª       SubscriptionEntity.class
+    ª   ª           ª       ª       SubscriptionPlanEntity.class
     ª   ª           ª       ª       
     ª   ª           ª       +---dto
     ª   ª           ª       ª       PlanUpgradeRequest.class
+    ª   ª           ª       ª       SubscriptionRemainingTimeDTO.class
     ª   ª           ª       ª       SubscriptionResponseDTO.class
     ª   ª           ª       ª       
     ª   ª           ª       +---listener
@@ -234,6 +239,7 @@ D:.
     ª   ª           ª       ª       SubscriptionMapper.class
     ª   ª           ª       ª       
     ª   ª           ª       +---repository
+    ª   ª           ª       ª       SubscriptionPlanRepository.class
     ª   ª           ª       ª       SubscriptionRepository.class
     ª   ª           ª       ª       
     ª   ª           ª       +---services
@@ -513,6 +519,7 @@ package com.project.apirental.config;
 import com.project.apirental.shared.security.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.SecurityWebFiltersOrder;
@@ -532,6 +539,8 @@ public class SecurityConfig {
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(exchanges -> exchanges
                         .pathMatchers("/auth/**", "/swagger-ui.html", "/webjars/**", "/v3/api-docs/**").permitAll()
+                        .pathMatchers("/api/subscriptions/plans/**").permitAll()
+                        .pathMatchers(HttpMethod.PUT, "/api/subscriptions/plans/**").hasRole("ADMIN")
                         .pathMatchers("/api/org/**").hasRole("ORGANIZATION")
                         .anyExchange().authenticated()
                 )
@@ -830,6 +839,7 @@ import com.project.apirental.modules.organization.dto.OrgRegisterRequest;
 import com.project.apirental.modules.auth.repository.UserRepository;
 import com.project.apirental.modules.organization.domain.OrganizationEntity;
 import com.project.apirental.modules.organization.repository.OrganizationRepository;
+import com.project.apirental.modules.subscription.repository.SubscriptionPlanRepository;
 import com.project.apirental.modules.subscription.services.SubscriptionService;
 import com.project.apirental.shared.events.AuditEvent;
 import com.project.apirental.shared.security.JwtUtil;
@@ -850,7 +860,7 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final OrganizationRepository orgRepository;
-    
+    private final SubscriptionPlanRepository planRepository; // AjoutÃ©
     private final SubscriptionService subscriptionService;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
@@ -913,41 +923,48 @@ public class AuthService {
     @Transactional
     public Mono<OrganizationEntity> registerOrganization(OrgRegisterRequest request) {
         return userRepository.findByEmail(request.email())
-                .flatMap(existing -> Mono.error(new RuntimeException("Email already exists")))
-                .switchIfEmpty(Mono.defer(() -> {
-                    // 1. CrÃ©er le User
-                    UserEntity user = UserEntity.builder()
-                            .id(UUID.randomUUID())
-                            .firstname(request.firstname())
-                            .lastname(request.lastname())
-                            .fullname(request.firstname() +" "+ request.lastname())
-                            .email(request.email())
-                            .password(passwordEncoder.encode(request.password()))
-                            .role("ORGANIZATION")
-                            .isNewRecord(true)
-                            .build();
+                .flatMap(existing -> Mono.<OrganizationEntity>error(new RuntimeException("Email already exists")))
+                .switchIfEmpty(Mono.defer(() -> 
+                    // 1. On cherche d'abord le plan FREE
+                    planRepository.findByName("FREE")
+                        .switchIfEmpty(Mono.error(new RuntimeException("Plan FREE non configurÃ© en base")))
+                        .flatMap(freePlan -> {
+                            
+                            // 2. CrÃ©er le User
+                            UserEntity user = UserEntity.builder()
+                                    .id(UUID.randomUUID())
+                                    .firstname(request.firstname())
+                                    .lastname(request.lastname())
+                                    .fullname(request.firstname() + " " + request.lastname())
+                                    .email(request.email())
+                                    .password(passwordEncoder.encode(request.password()))
+                                    .role("ORGANIZATION")
+                                    .isNewRecord(true)
+                                    .build();
 
-                    return userRepository.save(user).flatMap(savedUser -> {
-                        // 2. CrÃ©er l'Organisation liÃ©e avec les valeurs par dÃ©faut
-                        OrganizationEntity org = OrganizationEntity.builder()
-                                .id(UUID.randomUUID())
-                                .name(request.orgName())
-                                .ownerId(savedUser.getId())
-                                .email(savedUser.getEmail()) // Email de contact par dÃ©faut = email du owner
-                                .country("CM") // DÃ©faut
-                                .timezone("Africa/Douala") // DÃ©faut
-                                .isVerified(false)
-                                .isNewRecord(true)
-                                .build();
-                        return orgRepository.save(org)
-                                .flatMap(savedOrg -> 
-                                    // 3. CrÃ©er la souscription FREE (ChaÃ®nage rÃ©actif)
-                                    subscriptionService.initializeDefaultSubscription(savedOrg.getId())
-                                        .thenReturn(savedOrg) // On retourne l'organisation pour le flux final
-                                )
-                                .doOnSuccess(o -> eventPublisher.publishEvent(new AuditEvent("REGISTER_ORG", "AUTH", "New Org: " + o.getName())));
-                    });
-                })).cast(OrganizationEntity.class);
+                            return userRepository.save(user).flatMap(savedUser -> {
+                                
+                                // 3. CrÃ©er l'Organisation AVEC le plan ID dÃ©jÃ  prÃ©sent
+                                OrganizationEntity org = OrganizationEntity.builder()
+                                        .id(UUID.randomUUID())
+                                        .name(request.orgName())
+                                        .ownerId(savedUser.getId())
+                                        .email(savedUser.getEmail())
+                                        .country("CM")
+                                        .timezone("Africa/Douala")
+                                        .subscriptionPlanId(freePlan.getId()) // <--- FIX : InjectÃ© ici
+                                        .subscriptionAutoRenew(true)
+                                        .isVerified(false)
+                                        .isNewRecord(true)
+                                        .build();
+
+                                return orgRepository.save(org)
+                                        .doOnSuccess(o -> eventPublisher.publishEvent(
+                                            new AuditEvent("REGISTER_ORG", "AUTH", "New Org: " + o.getName() + " with plan FREE")
+                                        ));
+                            });
+                        })
+                ));
     }
 }
 
@@ -961,6 +978,13 @@ import com.project.apirental.modules.organization.dto.OrgUpdateDTO;
 import com.project.apirental.modules.organization.mapper.OrgMapper;
 import com.project.apirental.modules.organization.repository.OrganizationRepository;
 import com.project.apirental.modules.organization.services.OrganizationService;
+import com.project.apirental.modules.subscription.dto.PlanUpgradeRequest;
+import com.project.apirental.modules.subscription.dto.SubscriptionRemainingTimeDTO;
+import com.project.apirental.modules.subscription.dto.SubscriptionResponseDTO;
+import com.project.apirental.modules.subscription.mapper.SubscriptionMapper;
+import com.project.apirental.modules.subscription.repository.SubscriptionPlanRepository;
+import com.project.apirental.modules.subscription.services.SubscriptionService;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -985,6 +1009,10 @@ public class OrganizationController {
     private final OrganizationService organizationService;
     private final OrganizationRepository organizationRepository;
     private final OrgMapper orgMapper;
+
+     private final SubscriptionService subscriptionService;
+    private final SubscriptionPlanRepository planRepository;
+    private final SubscriptionMapper subscriptionMapper;
 
     @Operation(summary = "Obtenir les dÃ©tails d'une organisation")
     @GetMapping("/{id}")
@@ -1011,6 +1039,36 @@ public class OrganizationController {
         return organizationRepository.findAllBySubscriptionPlanId(planId)
                 .map(orgMapper::toDto);
     }
+    @Operation(summary = "Statut de l'abonnement de cette organisation")
+    @GetMapping("/{id}/subscription")
+    @PreAuthorize("hasRole('ORGANIZATION')")
+    public Mono<ResponseEntity<SubscriptionResponseDTO>> getOrgSubscriptionStatus(@PathVariable UUID id) {
+        return organizationRepository.findById(id)
+                .flatMap(subscriptionService::checkAndDowngrade)
+                .flatMap(org -> planRepository.findById(org.getSubscriptionPlanId())
+                        .map(plan -> subscriptionMapper.toResponseDTO(org, plan)))
+                .map(ResponseEntity::ok);
+    }
+
+    @Operation(summary = "Temps restant avant expiration")
+    @GetMapping("/{id}/subscription/remaining")
+    @PreAuthorize("hasRole('ORGANIZATION')")
+    public Mono<ResponseEntity<SubscriptionRemainingTimeDTO>> getRemainingTime(@PathVariable UUID id) {
+        return subscriptionService.getRemainingTime(id).map(ResponseEntity::ok);
+    }
+
+    @Operation(summary = "Upgrade du plan de l'organisation")
+    @PutMapping("/{id}/subscription/upgrade")
+    @PreAuthorize("hasRole('ORGANIZATION')")
+    public Mono<ResponseEntity<SubscriptionResponseDTO>> upgradePlan(
+            @PathVariable UUID id,
+            @RequestBody PlanUpgradeRequest request) {
+        return subscriptionService.upgradePlan(id, request.newPlan().name())
+                .flatMap(updatedPlan -> organizationRepository.findById(id)
+                        .map(org -> subscriptionMapper.toResponseDTO(org, updatedPlan)))
+                .map(ResponseEntity::ok);
+    }
+
 }
 
 ---
@@ -1080,7 +1138,7 @@ public class OrganizationEntity implements Persistable<UUID> {
     private String logoUrl;
 
     // Subscription
-    private UUID subscriptionPlanId;
+    private UUID subscriptionPlanId; 
     private LocalDateTime subscriptionExpiresAt;
     @Builder.Default
     private Boolean subscriptionAutoRenew = true;
@@ -1313,12 +1371,8 @@ public class OrganizationService {
 `$ext
 package com.project.apirental.modules.subscription.api;
 
-import com.project.apirental.modules.subscription.domain.PlanType;
-import com.project.apirental.modules.subscription.dto.PlanUpgradeRequest;
-import com.project.apirental.modules.subscription.dto.SubscriptionPlanResponseDTO;
-import com.project.apirental.modules.subscription.mapper.SubscriptionPlanMapper;
+import com.project.apirental.modules.subscription.domain.SubscriptionPlanEntity;
 import com.project.apirental.modules.subscription.repository.SubscriptionPlanRepository;
-import com.project.apirental.modules.subscription.services.SubscriptionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -1334,43 +1388,31 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/subscriptions")
 @RequiredArgsConstructor
-@Tag(name = "Subscription Management", description = "Gestion des plans et des abonnements")
+@Tag(name = "Subscription Catalog", description = "Gestion du catalogue des plans")
 @SecurityRequirement(name = "bearerAuth")
 public class SubscriptionController {
 
-    private final SubscriptionService subscriptionService;
     private final SubscriptionPlanRepository planRepository;
-    private final SubscriptionPlanMapper planMapper;
 
-    @Operation(summary = "Lister tous les plans disponibles (Catalogue)")
+    @Operation(summary = "Lister tous les plans du catalogue")
     @GetMapping("/plans")
-    @PreAuthorize("hasAnyRole('ORGANIZATION', 'CLIENT')")
-    public Flux<SubscriptionPlanResponseDTO> getAllPlans() {
-        return planRepository.findAll()
-                .map(planMapper::toDto);
+    public Flux<SubscriptionPlanEntity> getAllPlans() {
+        return planRepository.findAll();
     }
 
-    @Operation(summary = "Obtenir le plan actuel d'une organisation")
-    @GetMapping("/status/{orgId}")
-    @PreAuthorize("hasRole('ORGANIZATION')")
-    public Mono<ResponseEntity<SubscriptionPlanResponseDTO>> getOrganizationPlan(@PathVariable UUID orgId) {
-        return subscriptionService.getActiveSubscription(orgId)
-                .flatMap(sub -> planRepository.findByName(sub.getPlanType()))
-                .map(planMapper::toDto)
+    @Operation(summary = "Mettre Ã  jour les quotas d'un plan (Admin uniquement)")
+    @PutMapping("/plans/{id}")
+    @PreAuthorize("hasRole('ADMIN')") // Protection Admin pour le catalogue
+    public Mono<ResponseEntity<SubscriptionPlanEntity>> updatePlan(
+            @PathVariable UUID id, 
+            @RequestBody SubscriptionPlanEntity planUpdate) {
+        return planRepository.findById(id)
+                .flatMap(existingPlan -> {
+                    planUpdate.setId(existingPlan.getId());
+                    return planRepository.save(planUpdate);
+                })
                 .map(ResponseEntity::ok)
-                .switchIfEmpty(Mono.error(new RuntimeException("Aucun plan trouvÃ© pour cette organisation")));
-    }
-
-    @Operation(summary = "Mettre Ã  jour le plan (Upgrade/Downgrade)")
-    @PutMapping("/upgrade/{orgId}")
-    @PreAuthorize("hasRole('ORGANIZATION')")
-    public Mono<ResponseEntity<SubscriptionPlanResponseDTO>> upgradePlan(
-            @PathVariable UUID orgId,
-            @RequestBody PlanUpgradeRequest request) {
-        
-        return subscriptionService.upgradePlan(orgId, request.newPlan())
-                .map(planMapper::toDto)
-                .map(ResponseEntity::ok);
+                .switchIfEmpty(Mono.error(new RuntimeException("Plan non trouvÃ©")));
     }
 }
 
@@ -1379,12 +1421,58 @@ public class SubscriptionController {
 `$ext
 package com.project.apirental.modules.subscription.domain;
 
+/**
+ * Ã‰numÃ©ration des types de plans de souscription disponibles.
+ * UtilisÃ©e pour la validation des requÃªtes d'upgrade et la logique mÃ©tier.
+ */
 public enum PlanType {
-    FREE, PRO, ENTERPRISE
+    FREE,
+    PRO,
+    ENTERPRISE
 }
 
 ---
 ### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\subscription\domain\SubscriptionEntity.java
+`$ext
+package com.project.apirental.modules.subscription.domain;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
+import org.springframework.data.domain.Persistable;
+import org.springframework.data.relational.core.mapping.Table;
+
+import java.util.UUID;
+import java.time.LocalDateTime;
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@Table("subscriptions") // CORRECTION : Doit pointer vers subscriptions
+public class SubscriptionEntity implements Persistable<UUID> {
+    @Id
+    private UUID id;
+    private UUID organizationId;
+    private String planType;
+    private String status;
+    private LocalDateTime startDate;
+    private LocalDateTime endDate;
+
+    @Transient
+    @Builder.Default
+    @JsonIgnore
+    private boolean isNewRecord = false;
+
+    @Override
+    @Transient
+    public boolean isNew() {
+        return isNewRecord || id == null;
+    }
+}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\subscription\domain\SubscriptionPlanEntity.java
 `$ext
 package com.project.apirental.modules.subscription.domain;
 
@@ -1403,7 +1491,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table("subscription_plans")
-public class SubscriptionEntity implements Persistable<UUID> {
+public class SubscriptionPlanEntity implements Persistable<UUID> {
     @Id
     private UUID id;
     private String name;
@@ -1439,8 +1527,22 @@ package com.project.apirental.modules.subscription.dto;
 import com.project.apirental.modules.subscription.domain.PlanType;
 import jakarta.validation.constraints.NotNull;
 
+// Utilise l'Enum PlanType (FREE, PRO, ENTERPRISE)
 public record PlanUpgradeRequest(
     @NotNull PlanType newPlan
+) {}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\subscription\dto\SubscriptionRemainingTimeDTO.java
+`$ext
+package com.project.apirental.modules.subscription.dto;
+
+public record SubscriptionRemainingTimeDTO(
+    long days,
+    long hours,
+    long minutes,
+    String formattedTime,
+    boolean isInfinite
 ) {}
 
 ---
@@ -1449,20 +1551,17 @@ public record PlanUpgradeRequest(
 package com.project.apirental.modules.subscription.dto;
 
 import java.math.BigDecimal;
-import java.util.UUID;
+import java.time.LocalDateTime;
 
 public record SubscriptionResponseDTO(
-    UUID id,
-    String name,
+    String planName,
     String description,
     BigDecimal price,
-    durationDays Integer,
+    Integer durationDays,
     Integer maxVehicles,
-    Integer maxDrivers,
     Integer maxAgencies,
-    Integer maxUsers,
-    Boolean hasGeofencing,
-    Boolean hasChat
+    LocalDateTime expiresAt,
+    Boolean isExpired
 ) {}
 
 ---
@@ -1493,21 +1592,43 @@ public class SubscriptionListener {
 `$ext
 package com.project.apirental.modules.subscription.mapper;
 
-import com.project.apirental.modules.subscription.domain.SubscriptionEntity;
+import com.project.apirental.modules.organization.domain.OrganizationEntity;
+import com.project.apirental.modules.subscription.domain.SubscriptionPlanEntity;
 import com.project.apirental.modules.subscription.dto.SubscriptionResponseDTO;
 import org.springframework.stereotype.Component;
+import java.time.LocalDateTime;
 
 @Component
 public class SubscriptionMapper {
-    public SubscriptionResponseDTO toDto(SubscriptionEntity entity) {
-        if (entity == null) return null;
+
+    public SubscriptionResponseDTO toResponseDTO(OrganizationEntity org, SubscriptionPlanEntity plan) {
+        boolean isExpired = org.getSubscriptionExpiresAt() != null && org.getSubscriptionExpiresAt().isBefore(LocalDateTime.now());
+        
         return new SubscriptionResponseDTO(
-            entity.getId(), entity.getName(), entity.getDescription(),
-            entity.getPrice(), entity.getMaxVehicles(), entity.getMaxDrivers(),
-            entity.getMaxAgencies(), entity.getMaxUsers(),
-            entity.getHasGeofencing(), entity.getHasChat()
+                plan.getName(),
+                plan.getDescription(),
+                plan.getPrice(),
+                plan.getDurationDays(),
+                plan.getMaxVehicles(),
+                plan.getMaxAgencies(),
+                org.getSubscriptionExpiresAt(),
+                isExpired
         );
     }
+}
+
+---
+### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\subscription\repository\SubscriptionPlanRepository.java
+`$ext
+package com.project.apirental.modules.subscription.repository;
+
+import com.project.apirental.modules.subscription.domain.SubscriptionPlanEntity;
+import org.springframework.data.r2dbc.repository.R2dbcRepository;
+import reactor.core.publisher.Mono;
+import java.util.UUID;
+
+public interface SubscriptionPlanRepository extends R2dbcRepository<SubscriptionPlanEntity, UUID> {
+    Mono<SubscriptionPlanEntity> findByName(String name);
 }
 
 ---
@@ -1518,13 +1639,29 @@ package com.project.apirental.modules.subscription.repository;
 import com.project.apirental.modules.subscription.domain.SubscriptionEntity;
 import org.springframework.data.r2dbc.repository.R2dbcRepository;
 import org.springframework.stereotype.Repository;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.UUID;
 
 @Repository
 public interface SubscriptionRepository extends R2dbcRepository<SubscriptionEntity, UUID> {
-    Mono<SubscriptionEntity> findByName(String name);
+
+    /**
+     * RÃ©cupÃ¨re l'historique complet des souscriptions d'une organisation, 
+     * de la plus rÃ©cente Ã  la plus ancienne.
+     */
+    Flux<SubscriptionEntity> findAllByOrganizationIdOrderByStartDateDesc(UUID organizationId);
+
+    /**
+     * RÃ©cupÃ¨re la souscription actuellement active pour une organisation.
+     */
+    Mono<SubscriptionEntity> findFirstByOrganizationIdAndStatus(UUID organizationId, String status);
+
+    /**
+     * RÃ©cupÃ¨re toutes les souscriptions d'un certain type (ex: pour des statistiques).
+     */
+    Flux<SubscriptionEntity> findAllByPlanType(String planType);
 }
 
 ---
@@ -1545,7 +1682,7 @@ public class PaymentService {
      * Simule un appel Ã  une passerelle de paiement (Stripe, etc.)
      */
     public Mono<Boolean> processPayment(String email, String planType, double amount) {
-        log.info("ðŸ’³ Simulation du paiement pour {} (Plan: {}, Montant: {}â‚¬)", email, planType, amount);
+        log.info("ðŸ’³ Simulation du paiement pour {} (Plan: {}, Montant: {}XAF)", email, planType, amount);
         
         // Simule un dÃ©lai rÃ©seau de 800ms sans bloquer le thread
         return Mono.delay(Duration.ofMillis(800))
@@ -1561,9 +1698,12 @@ public class PaymentService {
 `$ext
 package com.project.apirental.modules.subscription.services;
 
-import com.project.apirental.modules.subscription.domain.PlanType;
 import com.project.apirental.modules.subscription.domain.SubscriptionEntity;
+import com.project.apirental.modules.subscription.domain.SubscriptionPlanEntity;
+import com.project.apirental.modules.subscription.dto.SubscriptionRemainingTimeDTO;
+import com.project.apirental.modules.subscription.repository.SubscriptionPlanRepository;
 import com.project.apirental.modules.subscription.repository.SubscriptionRepository;
+import com.project.apirental.modules.organization.domain.OrganizationEntity;
 import com.project.apirental.modules.organization.repository.OrganizationRepository;
 import com.project.apirental.shared.events.AuditEvent;
 import lombok.RequiredArgsConstructor;
@@ -1572,6 +1712,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
+ import java.time.Duration;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -1581,50 +1722,108 @@ import java.util.UUID;
 @Slf4j
 public class SubscriptionService {
 
-    private final SubscriptionRepository planRepository;
+    private final SubscriptionPlanRepository planRepository;
+    private final SubscriptionRepository subscriptionRepository;
     private final OrganizationRepository organizationRepository;
     private final PaymentService paymentService;
     private final ApplicationEventPublisher eventPublisher;
 
-    /**
-     * Assigne le plan FREE par dÃ©faut Ã  une organisation
-     */
+    @Transactional
+    public Mono<OrganizationEntity> checkAndDowngrade(OrganizationEntity org) {
+        if (org.getSubscriptionExpiresAt() != null && org.getSubscriptionExpiresAt().isBefore(LocalDateTime.now())) {
+            return planRepository.findByName("FREE")
+                    .flatMap(freePlan -> {
+                        org.setSubscriptionPlanId(freePlan.getId());
+                        org.setSubscriptionExpiresAt(null);
+                        return organizationRepository.save(org);
+                    })
+                    .doOnSuccess(s -> eventPublisher.publishEvent(new AuditEvent("AUTO_DOWNGRADE", "SUBSCRIPTION", "Org " + org.getId() + " reverted to FREE")));
+        }
+        return Mono.just(org);
+    }
+
     @Transactional
     public Mono<Void> initializeDefaultSubscription(UUID organizationId) {
         return planRepository.findByName("FREE")
-                .switchIfEmpty(Mono.error(new RuntimeException("Plan FREE non configurÃ© en base")))
+                .switchIfEmpty(Mono.error(new RuntimeException("Erreur critique : Le plan FREE n'est pas configurÃ© en base de donnÃ©es.")))
                 .flatMap(plan -> organizationRepository.findById(organizationId)
                         .flatMap(org -> {
+                            // 1. Mise Ã  jour de l'Ã©tat de l'organisation
                             org.setSubscriptionPlanId(plan.getId());
-                            org.setSubscriptionExpiresAt(null); // IllimitÃ© pour FREE
-                            return organizationRepository.save(org);
+                            org.setSubscriptionExpiresAt(null); // FREE est Ã  vie
+                            org.setSubscriptionAutoRenew(true);
+
+                            // 2. CrÃ©ation de l'enregistrement historique (Contrat)
+                            SubscriptionEntity subRecord = SubscriptionEntity.builder()
+                                    .id(UUID.randomUUID())
+                                    .organizationId(organizationId)
+                                    .planType(plan.getName())
+                                    .status("ACTIVE")
+                                    .startDate(LocalDateTime.now())
+                                    .isNewRecord(true) // IMPORTANT pour l'INSERT
+                                    .build();
+                            // On chaÃ®ne les deux sauvegardes
+                            return organizationRepository.save(org)
+                            .then(subscriptionRepository.save(subRecord));
                         }))
-                .doOnSuccess(v -> eventPublisher.publishEvent(new AuditEvent("INIT_PLAN", "SUBSCRIPTION", "Org " + organizationId + " set to FREE")))
-                .then();
+                .doOnSuccess(v -> log.info("âœ… Plan FREE assignÃ© Ã  l'organisation {}", organizationId))
+                .then(); // On retourne Mono<Void> pour indiquer la fin du traitement
     }
 
-    /**
-     * Upgrade le plan d'une organisation
-     */
-    @Transactional
-    public Mono<SubscriptionEntity> upgradePlan(UUID organizationId, PlanType newPlanName) {
-        return Mono.zip(
-                organizationRepository.findById(organizationId),
-                planRepository.findByName(newPlanName.name())
-        ).flatMap(tuple -> {
-            var org = tuple.getT1();
-            var plan = tuple.getT2();
+     @Transactional
+    public Mono<SubscriptionPlanEntity> upgradePlan(UUID organizationId, String planName) {
+        return planRepository.findByName(planName)
+                .flatMap(plan -> organizationRepository.findById(organizationId)
+                        .flatMap(org -> paymentService.processPayment(org.getEmail(), planName, plan.getPrice().doubleValue())
+                                .flatMap(success -> {
+                                    // Mise Ã  jour Org
+                                    org.setSubscriptionPlanId(plan.getId());
+                                    org.setSubscriptionExpiresAt(LocalDateTime.now().plusDays(plan.getDurationDays()));
+                                    
+                                    // CrÃ©ation historique
+                                    SubscriptionEntity subRecord = SubscriptionEntity.builder()
+                                            .id(UUID.randomUUID())
+                                            .organizationId(organizationId)
+                                            .planType(plan.getName())
+                                            .status("ACTIVE")
+                                            .startDate(LocalDateTime.now())
+                                            .endDate(org.getSubscriptionExpiresAt())
+                                            .isNewRecord(true)
+                                            .build();
 
-            return paymentService.processPayment(org.getEmail(), plan.getName(), plan.getPrice().doubleValue())
-                    .flatMap(success -> {
-                        if (!success) return Mono.error(new RuntimeException("Paiement Ã©chouÃ©"));
+                                    return organizationRepository.save(org)
+                                            .then(subscriptionRepository.save(subRecord))
+                                            .thenReturn(plan);
+                                })));
+    }
 
-                        org.setSubscriptionPlanId(plan.getId());
-                        org.setSubscriptionExpiresAt(plan.getDurationDays() == 0 ? null : LocalDateTime.now().plusDays(plan.getDurationDays()));
-                        
-                        return organizationRepository.save(org).thenReturn(plan);
-                    });
-        }).doOnSuccess(p -> eventPublisher.publishEvent(new AuditEvent("UPGRADE_PLAN", "SUBSCRIPTION", "Org " + organizationId + " upgraded to " + p.getName())));
+
+    public Mono<SubscriptionRemainingTimeDTO> getRemainingTime(UUID orgId) {
+        return organizationRepository.findById(orgId)
+                .switchIfEmpty(Mono.error(new RuntimeException("Organisation non trouvÃ©e")))
+                // On vÃ©rifie d'abord si le plan a expirÃ© pour Ãªtre Ã  jour
+                .flatMap(this::checkAndDowngrade)
+                .map(org -> {
+                    if (org.getSubscriptionExpiresAt() == null) {
+                        return new SubscriptionRemainingTimeDTO(0, 0, 0, "IllimitÃ© (Plan FREE)", true);
+                    }
+
+                    LocalDateTime now = LocalDateTime.now();
+                    LocalDateTime expiry = org.getSubscriptionExpiresAt();
+
+                    if (expiry.isBefore(now)) {
+                        return new SubscriptionRemainingTimeDTO(0, 0, 0, "ExpirÃ©", false);
+                    }
+
+                    Duration duration = Duration.between(now, expiry);
+                    long days = duration.toDays();
+                    long hours = duration.toHoursPart();
+                    long minutes = duration.toMinutesPart();
+
+                    String formatted = String.format("%d jours, %d heures et %d minutes restantes", days, hours, minutes);
+
+                    return new SubscriptionRemainingTimeDTO(days, hours, minutes, formatted, false);
+                });
     }
 }
 

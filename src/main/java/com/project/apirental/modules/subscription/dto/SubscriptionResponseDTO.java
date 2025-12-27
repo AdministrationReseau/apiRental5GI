@@ -7,6 +7,7 @@ public record SubscriptionResponseDTO(
     String planName,
     String description,
     BigDecimal price,
+    Integer durationDays,
     Integer maxVehicles,
     Integer maxAgencies,
     LocalDateTime expiresAt,

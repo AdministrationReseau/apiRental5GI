@@ -26,7 +26,7 @@ public class OpenApiConfig {
     public GroupedOpenApi authApi() {
         return GroupedOpenApi.builder()
                 .group("1-authentification")
-                .pathsToMatch("/auth/**")
+                .pathsToMatch("/auth/**", "/api/media/**")
                 .build();
     }
 

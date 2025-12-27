@@ -26,6 +26,7 @@ public class SecurityConfig {
                         .pathMatchers("/api/subscriptions/plans/**").permitAll()
                         .pathMatchers(HttpMethod.PUT, "/api/subscriptions/plans/**").hasRole("ADMIN")
                         .pathMatchers("/api/org/**").hasRole("ORGANIZATION")
+                        .pathMatchers("/uploads/**").permitAll()
                         .anyExchange().authenticated()
                 )
                 .exceptionHandling(exceptionHandlingSpec -> exceptionHandlingSpec

@@ -49,7 +49,7 @@ public class SubscriptionService {
                                     .status("ACTIVE")
                                     .startDate(LocalDateTime.now())
                                     .isNewRecord(true)
-                                    .build();
+                                    .build();.
 
                             // 3. On chaîne les deux sauvegardes pour qu'elles s'exécutent
                             return organizationRepository.save(org)
@@ -65,8 +65,11 @@ public class SubscriptionService {
                 .flatMap(plan -> organizationRepository.findById(organizationId)
                         .flatMap(org -> paymentService.processPayment(org.getEmail(), planName, plan.getPrice().doubleValue())
                                 .flatMap(success -> {
+                                        // --- LOGIQUE DE TEST : 2 MINUTES AU LIEU DE 30 JOURS ---
+                                    LocalDateTime testExpiry = LocalDateTime.now().plusMinutes(2); 
                                     org.setSubscriptionPlanId(plan.getId());
-                                    org.setSubscriptionExpiresAt(LocalDateTime.now().plusDays(plan.getDurationDays()));
+                                     org.setSubscriptionExpiresAt(testExpiry);
+                                //     org.setSubscriptionExpiresAt(LocalDateTime.now().plusDays(plan.getDurationDays()));
                                     
                                     SubscriptionEntity subRecord = SubscriptionEntity.builder()
                                             .id(UUID.randomUUID())

@@ -1,5 +1,5 @@
 ﻿# Contexte du Projet : Fleet & Geofence API
-GÃ©nÃ©rÃ© le : 12/26/2025 16:02:36
+GÃ©nÃ©rÃ© le : 12/26/2025 16:35:31
 Framework : Spring Boot WebFlux (Reactive)
 
 ## 1. Arborescence du Projet
@@ -910,7 +910,7 @@ public class AuthService {
     }
 
     // ScÃ©nario Organisation: CrÃ©ation User + CrÃ©ation Org
-    @Transactional // Transaction rÃ©active
+    @Transactional
     public Mono<OrganizationEntity> registerOrganization(OrgRegisterRequest request) {
         return userRepository.findByEmail(request.email())
                 .flatMap(existing -> Mono.error(new RuntimeException("Email already exists")))
@@ -924,16 +924,20 @@ public class AuthService {
                             .email(request.email())
                             .password(passwordEncoder.encode(request.password()))
                             .role("ORGANIZATION")
-                            .isNewRecord(true) // <--- IMPORTANT : Force l'INSERT
+                            .isNewRecord(true)
                             .build();
 
                     return userRepository.save(user).flatMap(savedUser -> {
-                        // 2. CrÃ©er l'Organisation liÃ©e
+                        // 2. CrÃ©er l'Organisation liÃ©e avec les valeurs par dÃ©faut
                         OrganizationEntity org = OrganizationEntity.builder()
                                 .id(UUID.randomUUID())
                                 .name(request.orgName())
                                 .ownerId(savedUser.getId())
-                                .isNewRecord(true) // <--- IMPORTANT : Force l'INSERT
+                                .email(savedUser.getEmail()) // Email de contact par dÃ©faut = email du owner
+                                .country("CM") // DÃ©faut
+                                .timezone("Africa/Douala") // DÃ©faut
+                                .isVerified(false)
+                                .isNewRecord(true)
                                 .build();
                         return orgRepository.save(org)
                                 .flatMap(savedOrg -> 
@@ -1000,6 +1004,7 @@ public class OrganizationController {
 `$ext
 package com.project.apirental.modules.organization.domain;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -1021,7 +1026,58 @@ public class OrganizationEntity implements Persistable<UUID> {
     @Id
     private UUID id;
     private String name;
+    private String description;
     private UUID ownerId;
+
+    // Legal & Business
+    private String registrationNumber;
+    private String taxNumber;
+    private String businessLicense; // Path to file or URL
+
+    // Contact & Location
+    private String address;
+    private String city;
+    @Builder.Default
+    private String country = "CM";
+    private String postalCode;
+    private String region;
+    private String phone;
+    private String email;
+    private String website;
+
+    // Status
+    @Builder.Default
+    private Boolean isVerified = false;
+    private LocalDateTime verificationDate;
+
+    // Metrics (Counters)
+    @Builder.Default
+    private Integer currentAgencies = 0;
+    @Builder.Default
+    private Integer currentVehicles = 0;
+    @Builder.Default
+    private Integer currentDrivers = 0;
+    @Builder.Default
+    private Integer currentUsers = 0;
+
+    // Settings
+    @Builder.Default
+    private String timezone = "Africa/Douala";
+    private String logoUrl;
+
+    // Subscription
+    private UUID subscriptionPlanId;
+    private LocalDateTime subscriptionExpiresAt;
+    @Builder.Default
+    private Boolean subscriptionAutoRenew = true;
+
+    // Financial Metrics
+    @Builder.Default
+    private Integer totalRentals = 0;
+    @Builder.Default
+    private Double monthlyRevenue = 0.0;
+    @Builder.Default
+    private Double yearlyRevenue = 0.0;
 
     @Transient
     @Builder.Default
@@ -1046,17 +1102,58 @@ public record OrgRegisterRequest(String firstname, String lastname, String email
 ### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\organization\dto\OrgResponseDTO.java
 `$ext
 package com.project.apirental.modules.organization.dto;
-
+import java.time.LocalDateTime;
 import java.util.UUID;
-
-public record OrgResponseDTO(UUID id, String name, UUID ownerId) {}
+public record OrgResponseDTO(
+    UUID id,
+    String name,
+    String description,
+    UUID ownerId,
+    String registrationNumber,
+    String taxNumber,
+    String businessLicense,
+    String address,
+    String city,
+    String country,
+    String postalCode,
+    String region,
+    String phone,
+    String email,
+    String website,
+    Boolean isVerified,
+    LocalDateTime verificationDate,
+    Integer currentAgencies,
+    Integer currentVehicles,
+    Integer currentDrivers,
+    String timezone,
+    String logoUrl,
+    UUID subscriptionPlanId,
+    LocalDateTime subscriptionExpiresAt,
+    Integer totalRentals,
+    Double monthlyRevenue,
+    Double yearlyRevenue
+) {}
 
 ---
 ### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\organization\dto\OrgUpdateDTO.java
 `$ext
 package com.project.apirental.modules.organization.dto;
-
-public record OrgUpdateDTO(String name, String description, String address) {}
+// DTO utilisÃ© pour mettre Ã  jour les informations Ã©ditables par l'utilisateur
+public record OrgUpdateDTO(
+    String name,
+    String description,
+    String address,
+    String city,
+    String postalCode,
+    String region,
+    String phone,
+    String email,
+    String website,
+    String timezone,
+    String logoUrl,
+    String registrationNumber,
+    String taxNumber
+) {}
 
 ---
 ### Fichier : D:\Ecole\HASSANA 5GI 2025_2026\traffic réseau\apiRental5GI\src\main\java\com\project\apirental\modules\organization\mapper\OrgMapper.java
@@ -1073,9 +1170,33 @@ public class OrgMapper {
     public OrgResponseDTO toDto(OrganizationEntity entity) {
         if (entity == null) return null;
         return new OrgResponseDTO(
-                entity.getId(),
-                entity.getName(),
-                entity.getOwnerId()
+            entity.getId(),
+            entity.getName(),
+            entity.getDescription(),
+            entity.getOwnerId(),
+            entity.getRegistrationNumber(),
+            entity.getTaxNumber(),
+            entity.getBusinessLicense(),
+            entity.getAddress(),
+            entity.getCity(),
+            entity.getCountry(),
+            entity.getPostalCode(),
+            entity.getRegion(),
+            entity.getPhone(),
+            entity.getEmail(),
+            entity.getWebsite(),
+            entity.getIsVerified(),
+            entity.getVerificationDate(),
+            entity.getCurrentAgencies(),
+            entity.getCurrentVehicles(),
+            entity.getCurrentDrivers(),
+            entity.getTimezone(),
+            entity.getLogoUrl(),
+            entity.getSubscriptionPlanId(),
+            entity.getSubscriptionExpiresAt(),
+            entity.getTotalRentals(),
+            entity.getMonthlyRevenue(),
+            entity.getYearlyRevenue()
         );
     }
 }
@@ -1117,35 +1238,44 @@ import reactor.core.publisher.Mono;
 @RequiredArgsConstructor
 public class OrganizationService {
 
-    // On rÃ©utilise le repository dÃ©fini dans le module Auth (ou on pourrait le dÃ©placer dans Shared)
     private final OrganizationRepository organizationRepository;
     private final OrgMapper orgMapper;
     private final ApplicationEventPublisher eventPublisher;
 
     public Mono<OrgResponseDTO> getOrganization(UUID id) {
-    if (id == null) {
-        return Mono.error(new IllegalArgumentException("id must not be null"));
-    }
-    return organizationRepository.findById(id)
-            .map(orgMapper::toDto)
-            .switchIfEmpty(Mono.error(new RuntimeException("Organization not found")));
+        if (id == null) {
+            return Mono.error(new IllegalArgumentException("id must not be null"));
+        }
+        return organizationRepository.findById(id)
+                .map(orgMapper::toDto)
+                .switchIfEmpty(Mono.error(new RuntimeException("Organization not found")));
     }
 
     @Transactional
     public Mono<OrgResponseDTO> updateOrganization(UUID id, OrgUpdateDTO request) {
         if (id == null) {
-             return Mono.error(new IllegalArgumentException("id must not be null"));
+            return Mono.error(new IllegalArgumentException("id must not be null"));
         }
         return organizationRepository.findById(id)
             .flatMap(org -> {
-                if (org != null) {
-                    // Mise Ã  jour des champs
-                    if(request.name() != null) org.setName(request.name());
-                    // Ici on pourrait mapper d'autres champs si l'entitÃ© OrganizationEntity avait "description" etc.
+                // Mapping manuel (ou via MapStruct si configurÃ© plus tard)
+                if(request.name() != null) org.setName(request.name());
+                if(request.description() != null) org.setDescription(request.description());
+                if(request.address() != null) org.setAddress(request.address());
+                if(request.city() != null) org.setCity(request.city());
+                if(request.postalCode() != null) org.setPostalCode(request.postalCode());
+                if(request.region() != null) org.setRegion(request.region());
+                if(request.phone() != null) org.setPhone(request.phone());
+                if(request.email() != null) org.setEmail(request.email());
+                if(request.website() != null) org.setWebsite(request.website());
+                if(request.timezone() != null) org.setTimezone(request.timezone());
+                if(request.logoUrl() != null) org.setLogoUrl(request.logoUrl());
+                if(request.registrationNumber() != null) org.setRegistrationNumber(request.registrationNumber());
+                if(request.taxNumber() != null) org.setTaxNumber(request.taxNumber());
 
+                if (org != null) {
                     return organizationRepository.save(org)
                         .doOnSuccess(updatedOrg -> {
-                            // DÃ©clenchement de l'audit asynchrone
                             eventPublisher.publishEvent(new AuditEvent(
                                 "UPDATE_ORG",
                                 "ORGANIZATION",
@@ -1153,7 +1283,7 @@ public class OrganizationService {
                             ));
                         });
                 } else {
-                    return Mono.error(new RuntimeException("Organization not found"));
+                    return Mono.error(new IllegalArgumentException("org must not be null"));
                 }
             })
             .map(orgMapper::toDto)
@@ -1500,7 +1630,7 @@ public class CorsConfig {
     public CorsWebFilter corsWebFilter() {
         CorsConfiguration corsConfig = new CorsConfiguration();
         // Autoriser votre frontend (ex: React sur localhost:3000)
-        corsConfig.setAllowedOrigins(Arrays.asList("http://localhost:3000", "https://votre-app.vercel.app"));
+        corsConfig.setAllowedOrigins(Arrays.asList("http://localhost:3000", "http://localhost:3001", "http://localhost:3002","http://localhost:3003", "https://votre-app.vercel.app"));
         corsConfig.setMaxAge(3600L);
         corsConfig.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         corsConfig.setAllowedHeaders(Arrays.asList("Content-Type", "Authorization", "x-requested-with"));

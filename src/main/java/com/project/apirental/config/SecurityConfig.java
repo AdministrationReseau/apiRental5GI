@@ -23,6 +23,7 @@ public class SecurityConfig {
                 .authorizeExchange(exchanges -> exchanges
                         .pathMatchers("/auth/**", "/swagger-ui.html", "/webjars/**", "/v3/api-docs/**").permitAll()
                         .pathMatchers("/api/org/**").hasRole("ORGANIZATION")
+                        .pathMatchers("/uploads/**").permitAll()
                         .anyExchange().authenticated()
                 )
                 .exceptionHandling(exceptionHandlingSpec -> exceptionHandlingSpec

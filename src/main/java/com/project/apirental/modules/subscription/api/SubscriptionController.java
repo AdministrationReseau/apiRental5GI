@@ -1,5 +1,6 @@
 package com.project.apirental.modules.subscription.api;
 
+import java.util.Objects;
 import com.project.apirental.modules.subscription.domain.SubscriptionPlanEntity;
 import com.project.apirental.modules.subscription.repository.SubscriptionPlanRepository;
 import io.swagger.v3.oas.annotations.Operation;
@@ -35,10 +36,13 @@ public class SubscriptionController {
     public Mono<ResponseEntity<SubscriptionPlanEntity>> updatePlan(
             @PathVariable UUID id, 
             @RequestBody SubscriptionPlanEntity planUpdate) {
-        return planRepository.findById(id)
+        return planRepository.findById(Objects.requireNonNull(id, "L'ID ne peut pas être nul"))
                 .flatMap(existingPlan -> {
-                    planUpdate.setId(existingPlan.getId());
-                    return planRepository.save(planUpdate);
+                    UUID existingId = existingPlan.getId();
+                    if (existingId != null) {
+                        planUpdate.setId(existingPlan.getId());
+                    }
+                    return planRepository.save(Objects.requireNonNull(planUpdate));
                 })
                 .map(ResponseEntity::ok)
                 .switchIfEmpty(Mono.error(new RuntimeException("Plan non trouvé")));

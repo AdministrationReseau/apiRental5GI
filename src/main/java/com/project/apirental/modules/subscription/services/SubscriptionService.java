@@ -7,15 +7,16 @@ import com.project.apirental.modules.subscription.repository.SubscriptionPlanRep
 import com.project.apirental.modules.subscription.repository.SubscriptionRepository;
 import com.project.apirental.modules.organization.domain.OrganizationEntity;
 import com.project.apirental.modules.organization.repository.OrganizationRepository;
-import com.project.apirental.shared.events.AuditEvent;
+// import com.project.apirental.shared.events.AuditEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationEventPublisher;
+// import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -27,13 +28,13 @@ public class SubscriptionService {
     private final SubscriptionRepository subscriptionRepository; // FIX : Utiliser le bon type ici
     private final OrganizationRepository organizationRepository;
     private final PaymentService paymentService;
-    private final ApplicationEventPublisher eventPublisher;
+//     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public Mono<Void> initializeDefaultSubscription(UUID organizationId) {
         return planRepository.findByName("FREE")
                 .switchIfEmpty(Mono.error(new RuntimeException("Plan FREE non configuré")))
-                .flatMap(plan -> organizationRepository.findById(organizationId)
+                .flatMap(plan -> organizationRepository.findById(Objects.requireNonNull(organizationId))
                         .flatMap(org -> {
                             // 1. Mise à jour de l'état de l'organisation
                             org.setSubscriptionPlanId(plan.getId());
@@ -52,7 +53,7 @@ public class SubscriptionService {
 
                             // 3. On chaîne les deux sauvegardes pour qu'elles s'exécutent
                             return organizationRepository.save(org)
-                                    .then(subscriptionRepository.save(subRecord))
+                                    .then(subscriptionRepository.save(Objects.requireNonNull(subRecord)))
                                     .doOnSuccess(s -> log.info("✅ Historique de souscription créé pour l'org {}", organizationId));
                         }))
                 .then();
@@ -61,7 +62,7 @@ public class SubscriptionService {
     @Transactional
     public Mono<SubscriptionPlanEntity> upgradePlan(UUID organizationId, String planName) {
         return planRepository.findByName(planName)
-                .flatMap(plan -> organizationRepository.findById(organizationId)
+                .flatMap(plan -> organizationRepository.findById(Objects.requireNonNull(organizationId))
                         .flatMap(org -> paymentService.processPayment(org.getEmail(), planName, plan.getPrice().doubleValue())
                                 .flatMap(success -> {
                                         // --- LOGIQUE DE TEST : 2 MINUTES AU LIEU DE 30 JOURS ---
@@ -81,7 +82,7 @@ public class SubscriptionService {
                                             .build();
 
                                     return organizationRepository.save(org)
-                                            .then(subscriptionRepository.save(subRecord))
+                                            .then(subscriptionRepository.save(Objects.requireNonNull(subRecord)))
                                             .thenReturn(plan);
                                 })));
     }
@@ -103,7 +104,7 @@ public class SubscriptionService {
                                 .isNewRecord(true)
                                 .build();
 
-                        return subscriptionRepository.save(history)
+                        return subscriptionRepository.save(Objects.requireNonNull(history))
                                 .then(organizationRepository.save(org));
                     });
         }
@@ -111,7 +112,7 @@ public class SubscriptionService {
     }
 
     public Mono<SubscriptionRemainingTimeDTO> getRemainingTime(UUID orgId) {
-        return organizationRepository.findById(orgId)
+        return organizationRepository.findById(Objects.requireNonNull(orgId))
                 .flatMap(this::checkAndDowngrade)
                 .map(org -> {
                     if (org.getSubscriptionExpiresAt() == null) {
@@ -133,7 +134,7 @@ public class SubscriptionService {
                 .endDate(endDate)
                 .isNewRecord(true)
                 .build();
-                
-        return subscriptionRepository.save(history);
+
+        return subscriptionRepository.save(Objects.requireNonNull(history));
     }
 }

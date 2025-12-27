@@ -8,6 +8,7 @@ import com.project.apirental.modules.subscription.repository.SubscriptionPlanRep
 import com.project.apirental.shared.events.AuditEvent;
 import lombok.RequiredArgsConstructor;
 
+import java.util.Objects;
 import java.util.UUID;
 
 import org.springframework.context.ApplicationEventPublisher;
@@ -77,8 +78,8 @@ public class OrganizationService {
  * selon les limites de son plan de souscription.
  */
 public Mono<Boolean> validateQuota(UUID orgId, String resourceType) {
-    return organizationRepository.findById(orgId)
-        .flatMap(org -> planRepository.findById(org.getSubscriptionPlanId())
+    return organizationRepository.findById(Objects.requireNonNull(orgId))
+        .flatMap(org -> planRepository.findById(Objects.requireNonNull(org.getSubscriptionPlanId()))
             .map(plan -> {
                 return switch (resourceType.toUpperCase()) {
                     case "AGENCY" -> org.getCurrentAgencies() < plan.getMaxAgencies();
@@ -96,7 +97,7 @@ public Mono<Boolean> validateQuota(UUID orgId, String resourceType) {
  */
 @Transactional
 public Mono<Void> updateAgencyCounter(UUID orgId, int increment) {
-    return organizationRepository.findById(orgId)
+    return organizationRepository.findById(Objects.requireNonNull(orgId))
         .flatMap(org -> {
             org.setCurrentAgencies(org.getCurrentAgencies() + increment);
             return organizationRepository.save(org);
@@ -109,13 +110,13 @@ public Mono<Void> updateAgencyCounter(UUID orgId, int increment) {
  */
 @Transactional
 public Mono<Void> updateResourceCounter(UUID orgId, String resourceType, int increment) {
-    return organizationRepository.findById(orgId)
+    return organizationRepository.findById(Objects.requireNonNull(orgId))
         .flatMap(org -> {
             switch (resourceType.toUpperCase()) {
                 case "VEHICLE" -> org.setCurrentVehicles(org.getCurrentVehicles() + increment);
                 case "DRIVER" -> org.setCurrentDrivers(org.getCurrentDrivers() + increment);
             }
-            return organizationRepository.save(org);
+            return organizationRepository.save(Objects.requireNonNull(org));
         }).then();
 }
 }

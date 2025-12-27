@@ -6,19 +6,20 @@ import com.project.apirental.modules.organization.dto.OrgRegisterRequest;
 import com.project.apirental.modules.auth.repository.UserRepository;
 import com.project.apirental.modules.organization.domain.OrganizationEntity;
 import com.project.apirental.modules.organization.repository.OrganizationRepository;
-import com.project.apirental.modules.subscription.domain.SubscriptionEntity;
+// import com.project.apirental.modules.subscription.domain.SubscriptionEntity;
 import com.project.apirental.modules.subscription.repository.SubscriptionPlanRepository;
-import com.project.apirental.modules.subscription.repository.SubscriptionRepository;
+// import com.project.apirental.modules.subscription.repository.SubscriptionRepository;
 import com.project.apirental.modules.subscription.services.SubscriptionService;
 import com.project.apirental.shared.events.AuditEvent;
 import com.project.apirental.shared.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.util.Objects;
+// import java.time.LocalDateTime;
 import java.util.UUID;
 
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.data.repository.reactive.ReactiveCrudRepository;
+// import org.springframework.data.repository.reactive.ReactiveCrudRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,7 +33,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final OrganizationRepository orgRepository;
     private final SubscriptionPlanRepository planRepository; 
-    private final SubscriptionRepository subscriptionRepository;
+    // private final SubscriptionRepository subscriptionRepository;
     private final SubscriptionService subscriptionService;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
@@ -86,7 +87,7 @@ public class AuthService {
                             .role("CLIENT")
                             .isNewRecord(true) // <--- IMPORTANT : Force l'INSERT
                             .build();
-                    return userRepository.save(user)
+                    return userRepository.save(Objects.requireNonNull(user))
                             .doOnSuccess(u -> eventPublisher.publishEvent(new AuditEvent("REGISTER_CLIENT", "AUTH", "New client: " + u.getEmail())));
                 })).cast(UserEntity.class);
     }
@@ -114,7 +115,7 @@ public class AuthService {
                                     .isNewRecord(true)
                                     .build();
 
-                            return userRepository.save(user).flatMap(savedUser -> {
+                            return userRepository.save(Objects.requireNonNull(user)).flatMap(savedUser -> {
                                 
                                 // 3. Créer l'Organisation AVEC le plan ID déjà présent
                                 OrganizationEntity org = OrganizationEntity.builder()
@@ -130,7 +131,7 @@ public class AuthService {
                                         .isNewRecord(true)
                                         .build();
 
-                                return orgRepository.save(org)
+                                return orgRepository.save(Objects.requireNonNull(org))
                                         .flatMap(savedOrg -> 
                                             // 4.APPEL AU SERVICE : Remplir la table subscriptions (historique)
                                             subscriptionService.createHistoryRecord(savedOrg.getId(), freePlan.getName(), null)

@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -32,9 +33,9 @@ public class AgencyService {
 
     @Transactional
     public Mono<AgencyResponseDTO> createAgency(UUID orgId, AgencyRequestDTO request) {
-        return organizationRepository.findById(orgId)
+        return organizationRepository.findById(Objects.requireNonNull(orgId))
             .switchIfEmpty(Mono.error(new RuntimeException("Organisation non trouvée")))
-            .flatMap(org -> planRepository.findById(org.getSubscriptionPlanId())
+            .flatMap(org -> planRepository.findById(Objects.requireNonNull(org.getSubscriptionPlanId()))
                 .flatMap(plan -> {
                     // 1. VERIFICATION QUOTA AGENCES
                     if (org.getCurrentAgencies() >= plan.getMaxAgencies()) {
@@ -53,7 +54,7 @@ public class AgencyService {
                             .build();
 
                     // 3. SAUVEGARDE + MISE A JOUR COMPTEUR ORG
-                    return agencyRepository.save(agency)
+                    return agencyRepository.save(Objects.requireNonNull(agency))
                             .flatMap(savedAgency -> {
                                 org.setCurrentAgencies(org.getCurrentAgencies() + 1);
                                 return organizationRepository.save(org)
@@ -69,8 +70,8 @@ public class AgencyService {
      * pour vérifier si l'organisation a encore du crédit dans son plan.
      */
     public Mono<Boolean> canAddResource(UUID orgId, String resourceType) {
-        return organizationRepository.findById(orgId)
-            .flatMap(org -> planRepository.findById(org.getSubscriptionPlanId())
+        return organizationRepository.findById(Objects.requireNonNull(orgId))
+            .flatMap(org -> planRepository.findById(Objects.requireNonNull(org.getSubscriptionPlanId()))
                 .map(plan -> {
                     return switch (resourceType.toUpperCase()) {
                         case "VEHICLE" -> org.getCurrentVehicles() < plan.getMaxVehicles();
@@ -87,7 +88,7 @@ public class AgencyService {
     }
 
     public Mono<AgencyResponseDTO> getAgency(UUID id) {
-        return agencyRepository.findById(id)
+        return agencyRepository.findById(Objects.requireNonNull(id))
                 .map(agencyMapper::toDto)
                 .switchIfEmpty(Mono.error(new RuntimeException("Agence non trouvée")));
     }
@@ -95,14 +96,14 @@ public class AgencyService {
 
     @Transactional
     public Mono<AgencyResponseDTO> updateAgency(UUID id, AgencyRequestDTO request) {
-        return agencyRepository.findById(id)
+        return agencyRepository.findById(Objects.requireNonNull(id))
                 .flatMap(existing -> {
                     if(request.name() != null) existing.setName(request.name());
                     if(request.address() != null) existing.setAddress(request.address());
                     if(request.city() != null) existing.setCity(request.city());
                     if(request.phone() != null) existing.setPhone(request.phone());
                     // ... mettre à jour les autres champs nécessaires
-                    return agencyRepository.save(existing);
+                    return agencyRepository.save(Objects.requireNonNull(existing));
                 })
                 .doOnSuccess(updated -> eventPublisher.publishEvent(
                         new AuditEvent("UPDATE_AGENCY", "AGENCY", "Updated agency: " + updated.getName())
@@ -111,7 +112,7 @@ public class AgencyService {
     }
 
     public Mono<Void> deleteAgency(UUID id) {
-        return agencyRepository.deleteById(id)
+        return agencyRepository.deleteById(Objects.requireNonNull(id))
                 .doOnSuccess(v -> eventPublisher.publishEvent(
                         new AuditEvent("DELETE_AGENCY", "AGENCY", "Deleted agency ID: " + id)
                 ));

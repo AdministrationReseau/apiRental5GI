@@ -17,6 +17,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
+import java.util.Objects;
 import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
@@ -70,9 +71,9 @@ public class OrganizationController {
     @GetMapping("/{id}/subscription")
     @PreAuthorize("hasRole('ORGANIZATION')")
     public Mono<ResponseEntity<SubscriptionResponseDTO>> getOrgSubscriptionStatus(@PathVariable UUID id) {
-        return organizationRepository.findById(id)
+        return organizationRepository.findById(Objects.requireNonNull(id))
                 .flatMap(subscriptionService::checkAndDowngrade)
-                .flatMap(org -> planRepository.findById(org.getSubscriptionPlanId())
+                .flatMap(org -> planRepository.findById(Objects.requireNonNull(org.getSubscriptionPlanId()))
                         .map(plan -> subscriptionMapper.toResponseDTO(org, plan)))
                 .map(ResponseEntity::ok);
     }
@@ -91,7 +92,7 @@ public class OrganizationController {
             @PathVariable UUID id,
             @RequestBody PlanUpgradeRequest request) {
         return subscriptionService.upgradePlan(id, request.newPlan().name())
-                .flatMap(updatedPlan -> organizationRepository.findById(id)
+                .flatMap(updatedPlan -> organizationRepository.findById(Objects.requireNonNull(id))
                         .map(org -> subscriptionMapper.toResponseDTO(org, updatedPlan)))
                 .map(ResponseEntity::ok);
     }

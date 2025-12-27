@@ -17,6 +17,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -73,25 +74,31 @@ public class MediaService {
                         String publicUrl = baseUrl + "/uploads/" + uniqueName;
 
                         // Sauvegarde physique + Base de données
-                        return filePart.transferTo(destinationFile)
+                        return filePart.transferTo(Objects.requireNonNull(destinationFile))
                                 .then(saveMediaEntity(filePart, uniqueName, publicUrl, user.getId()));
                     });
                 });
     }
 
     private Mono<MediaEntity> saveMediaEntity(FilePart filePart, String filename, String url, UUID uploaderId) {
+        // 1. On récupère le MediaType dans une variable locale
+        org.springframework.http.MediaType contentType = filePart.headers().getContentType();
+    
+        // 2. On détermine la chaîne de caractère de façon sécurisée
+        String fileTypeString = (contentType != null) ? contentType.toString() : "application/octet-stream";
         MediaEntity media = MediaEntity.builder()
                 .id(UUID.randomUUID())
                 .filename(filename)
                 .originalFilename(filePart.filename())
-                .fileType(filePart.headers().getContentType() != null ? filePart.headers().getContentType().toString() : "application/octet-stream")
+                // .fileType(filePart.headers().getContentType() != null ? filePart.headers().getContentType().toString() : "application/octet-stream")
+                .fileType(fileTypeString)
                 .fileUrl(url)
                 .uploaderId(uploaderId)
                 .createdAt(LocalDateTime.now())
                 .isNewRecord(true)
                 .build();
 
-        return mediaRepository.save(media);
+        return mediaRepository.save(Objects.requireNonNull(media));
     }
 
     // Utilitaires

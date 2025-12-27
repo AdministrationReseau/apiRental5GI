@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.CacheControl;
 import org.springframework.web.reactive.config.ResourceHandlerRegistry;
 import org.springframework.web.reactive.config.WebFluxConfigurer;
+import org.springframework.lang.NonNull;
 
 import java.nio.file.Paths;
 import java.util.concurrent.TimeUnit;
@@ -16,7 +17,7 @@ public class MediaWebConfig implements WebFluxConfigurer {
     private String uploadDir;
 
     @Override
-    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+    public void addResourceHandlers(@NonNull ResourceHandlerRegistry registry) {
         // Expose le dossier local "uploads" via l'URL "/uploads/**"
         String absolutePath = Paths.get(uploadDir).toAbsolutePath().toUri().toString();
 

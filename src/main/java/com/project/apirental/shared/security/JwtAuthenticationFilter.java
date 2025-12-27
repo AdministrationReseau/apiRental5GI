@@ -9,8 +9,10 @@ import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
+import org.springframework.lang.NonNull;
 
 import java.util.Collections;
+import java.util.Objects;
 
 @Component
 public class JwtAuthenticationFilter implements WebFilter {
@@ -22,7 +24,8 @@ public class JwtAuthenticationFilter implements WebFilter {
     }
 
     @Override
-    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+    @NonNull
+    public Mono<Void> filter(@NonNull ServerWebExchange exchange, @NonNull WebFilterChain chain) {
         String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
@@ -39,10 +42,13 @@ public class JwtAuthenticationFilter implements WebFilter {
                         Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role))
                 );
 
-                return chain.filter(exchange)
-                        .contextWrite(ReactiveSecurityContextHolder.withAuthentication(auth));
-            }
+                return Objects.requireNonNull(
+                chain.filter(exchange)
+                    .contextWrite(ReactiveSecurityContextHolder.withAuthentication(auth)),
+                "Le filtre ne doit pas retourner une valeur nulle"
+            );
         }
-        return chain.filter(exchange);
+        }
+         return Objects.requireNonNull(chain.filter(exchange));
     }
 }

@@ -4,8 +4,7 @@ import com.project.apirental.modules.subscription.domain.SubscriptionEntity;
 import com.project.apirental.modules.subscription.domain.SubscriptionPlanEntity;
 import com.project.apirental.modules.subscription.dto.SubscriptionRemainingTimeDTO;
 import com.project.apirental.modules.subscription.repository.SubscriptionPlanRepository;
-import com.project.apirental.modules.subscription.repository.SubscriptionRepository; // Import correct
-import com.project.apirental.modules.auth.dto.AuthResponse;
+import com.project.apirental.modules.subscription.repository.SubscriptionRepository;
 import com.project.apirental.modules.organization.domain.OrganizationEntity;
 import com.project.apirental.modules.organization.repository.OrganizationRepository;
 import com.project.apirental.shared.events.AuditEvent;
@@ -49,7 +48,7 @@ public class SubscriptionService {
                                     .status("ACTIVE")
                                     .startDate(LocalDateTime.now())
                                     .isNewRecord(true)
-                                    .build();.
+                                    .build();
 
                             // 3. On chaîne les deux sauvegardes pour qu'elles s'exécutent
                             return organizationRepository.save(org)

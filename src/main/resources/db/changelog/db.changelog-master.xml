@@ -111,7 +111,6 @@
         </createTable>
     </changeSet>
 
-<<<<<<< HEAD
     <!-- 7. Table des Plans de Souscription (Le Catalogue) -->
     <changeSet id="7-create-subscription-plans" author="hassana">
         <createTable tableName="subscription_plans">
@@ -181,7 +180,6 @@
                                  constraintName="fk_org_sub_plan" referencedTableName="subscription_plans" 
                                  referencedColumnNames="id"/>
     </changeSet>
-=======
     <changeSet id="7" author="brayanne">
         <createTable tableName="medias">
             <column name="id" type="UUID">
@@ -200,6 +198,5 @@
         </createTable>
     </changeSet>
 
->>>>>>> cc9b34474bd7983d0d492a39b6d9831f69f29be3
 
 </databaseChangeLog>

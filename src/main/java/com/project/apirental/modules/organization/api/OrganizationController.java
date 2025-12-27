@@ -2,6 +2,8 @@ package com.project.apirental.modules.organization.api;
 
 import com.project.apirental.modules.organization.dto.OrgResponseDTO;
 import com.project.apirental.modules.organization.dto.OrgUpdateDTO;
+import com.project.apirental.modules.organization.mapper.OrgMapper;
+import com.project.apirental.modules.organization.repository.OrganizationRepository;
 import com.project.apirental.modules.organization.services.OrganizationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -13,6 +15,8 @@ import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @RestController
@@ -23,6 +27,8 @@ import reactor.core.publisher.Mono;
 public class OrganizationController {
 
     private final OrganizationService organizationService;
+    private final OrganizationRepository organizationRepository;
+    private final OrgMapper orgMapper;
 
     @Operation(summary = "Obtenir les détails d'une organisation")
     @GetMapping("/{id}")
@@ -40,5 +46,13 @@ public class OrganizationController {
             @RequestBody OrgUpdateDTO request) {
         return organizationService.updateOrganization(id, request)
                 .map(ResponseEntity::ok);
+    }
+
+    @Operation(summary = "Lister les organisations par nom de plan de souscription")
+    @GetMapping("/plan/{planName}")
+    @PreAuthorize("hasRole('ORGANIZATION')")
+    public Flux<OrgResponseDTO> getOrganizationsByPlan(@PathVariable String planName) {
+        return organizationRepository.findAllBySubscriptionPlanName(planName)
+                .map(orgMapper::toDto);
     }
 }

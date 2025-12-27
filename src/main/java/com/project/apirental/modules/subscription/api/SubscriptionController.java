@@ -1,5 +1,7 @@
 package com.project.apirental.modules.subscription.api;
 
+import com.project.apirental.modules.organization.repository.OrganizationRepository;
+import com.project.apirental.modules.subscription.domain.SubscriptionCatalog;
 import com.project.apirental.modules.subscription.dto.PlanUpgradeRequest;
 import com.project.apirental.modules.subscription.dto.SubscriptionResponseDTO;
 import com.project.apirental.modules.subscription.mapper.SubscriptionMapper;
@@ -11,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.UUID;
@@ -19,29 +22,55 @@ import java.util.UUID;
 @RequestMapping("/api/subscriptions")
 @RequiredArgsConstructor
 @Tag(name = "Subscription Management")
-// @SecurityRequirement(name = "bearerAuth")
+@SecurityRequirement(name = "bearerAuth")
 public class SubscriptionController {
 
     private final SubscriptionService subscriptionService;
     private final SubscriptionMapper subscriptionMapper;
+    private final OrganizationRepository organizationRepository;
 
-    @Operation(summary = "Récupérer la souscription active d'une organisation")
-    @GetMapping("/org/{orgId}")
-    @PreAuthorize("hasRole('ORGANIZATION')")
-    public Mono<ResponseEntity<SubscriptionResponseDTO>> getMySubscription(@PathVariable UUID orgId) {
-        return subscriptionService.getActiveSubscription(orgId)
-                .map(subscriptionMapper::toDto)
-                .map(ResponseEntity::ok);
+    @Operation(summary = "Lister le catalogue des plans")
+    @GetMapping("/plans")
+    public Flux<SubscriptionCatalog.SubscriptionPlan> getCatalog() {
+        return Flux.fromIterable(SubscriptionCatalog.PLANS.values());
     }
 
-    @Operation(summary = "Mettre à jour le plan d'une organisation")
-    @PutMapping("/org/{orgId}/upgrade")
+    @Operation(summary = "Obtenir le statut actuel")
+    @GetMapping("/status/{orgId}")
+    @PreAuthorize("hasRole('ORGANIZATION')")
+    public Mono<ResponseEntity<SubscriptionResponseDTO>> getOrganizationPlan(@PathVariable UUID orgId) {
+        return organizationRepository.findById(orgId)
+                .flatMap(subscriptionService::checkAndDowngrade)
+                .map(subscriptionMapper::toResponseDTO)
+                .map(ResponseEntity::ok)
+                .switchIfEmpty(Mono.error(new RuntimeException("Organisation non trouvée")));
+    }
+
+    @Operation(summary = "Mettre à jour le plan (Upgrade)")
+    @PutMapping("/upgrade/{orgId}")
     @PreAuthorize("hasRole('ORGANIZATION')")
     public Mono<ResponseEntity<SubscriptionResponseDTO>> upgradePlan(
             @PathVariable UUID orgId,
             @RequestBody PlanUpgradeRequest request) {
-        return subscriptionService.upgradePlan(orgId, request.newPlan())
-                .map(subscriptionMapper::toDto)
+        
+        // request.newPlan() est un PlanType (Enum), donc .name() renvoie "PRO", "FREE", etc.
+        String planName = request.newPlan().name();
+
+        return subscriptionService.upgradePlan(orgId, planName)
+                .flatMap(plan -> organizationRepository.findById(orgId))
+                .map(subscriptionMapper::toResponseDTO)
                 .map(ResponseEntity::ok);
+    }
+
+   @Operation(summary = "Récupérer tous les véhicules liés à un type de plan")
+    @GetMapping("/vehicles-by-plan/{planName}")
+    @PreAuthorize("hasRole('ORGANIZATION')")
+    public Flux<Object> getVehiclesByPlan(@PathVariable String planName) {
+        // planName est une String, le repository accepte maintenant une String
+        return organizationRepository.findAllBySubscriptionPlanName(planName.toUpperCase())
+                .flatMap(org -> {
+                    // Logique future pour les véhicules
+                    return Flux.empty(); 
+                });
     }
 }

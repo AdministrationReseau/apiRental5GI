@@ -1,31 +1,35 @@
 package com.project.apirental.modules.subscription.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
 import org.springframework.data.domain.Persistable;
 import org.springframework.data.relational.core.mapping.Table;
 
-import java.time.LocalDateTime;
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table("subscriptions")
+@Table("subscription_plans")
 public class SubscriptionEntity implements Persistable<UUID> {
     @Id
     private UUID id;
-    private UUID organizationId;
-    private String planType;
-    private String status;
-    private LocalDateTime startDate;
-    private LocalDateTime endDate;
+    private String name;
+    private String description;
+    private BigDecimal price;
+    private Integer durationDays;
+    private Integer maxVehicles;
+    private Integer maxDrivers;
+    private Integer maxAgencies;
+    private Integer maxUsers;
+    @Builder.Default
+    private Boolean hasGeofencing = false;
+    @Builder.Default
+    private Boolean hasChat = false;
 
     @Transient
     @Builder.Default

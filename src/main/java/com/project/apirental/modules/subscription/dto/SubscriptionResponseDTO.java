@@ -1,13 +1,14 @@
 package com.project.apirental.modules.subscription.dto;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 public record SubscriptionResponseDTO(
-    UUID id,
-    UUID organizationId,
-    String planType,
-    String status,
-    LocalDateTime startDate,
-    LocalDateTime endDate
+    String planName,
+    String description,
+    BigDecimal price,
+    Integer maxVehicles,
+    Integer maxAgencies,
+    LocalDateTime expiresAt,
+    Boolean isExpired
 ) {}

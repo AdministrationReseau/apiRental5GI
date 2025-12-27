@@ -82,7 +82,7 @@
             <column name="current_users" type="INT" defaultValueNumeric="0"/>
             <column name="timezone" type="VARCHAR(50)" defaultValue="Africa/Douala"/>
             <column name="logo_url" type="VARCHAR(500)"/>
-            <column name="subscription_plan_id" type="UUID"/>
+            <column name="subscription_plan_name" type="VARCHAR(50)"/>
             <column name="subscription_expires_at" type="TIMESTAMP"/>
             <column name="subscription_auto_renew" type="BOOLEAN" defaultValueBoolean="true"/>
             <column name="total_rentals" type="INT" defaultValueNumeric="0"/>
@@ -90,5 +90,26 @@
             <column name="yearly_revenue" type="DOUBLE" defaultValueNumeric="0.0"/>
         </addColumn>
     </changeSet>
+
+       <!-- 6. Table Subscriptions (Historique des transactions / Contrats) -->
+    <changeSet id="6" author="hassana">
+        <createTable tableName="subscriptions">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="organization_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_subscription_org" referencedTableName="organizations" referencedColumnNames="id" deleteCascade="true"/>
+            </column>
+            <column name="plan_type" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="start_date" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+            <column name="end_date" type="TIMESTAMP"/>
+        </createTable>
+    </changeSet>
+
 
 </databaseChangeLog>

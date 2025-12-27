@@ -62,7 +62,8 @@ public class OrganizationEntity implements Persistable<UUID> {
     private String logoUrl;
 
     // Subscription
-    private UUID subscriptionPlanId;
+    // private UUID subscriptionPlanId;
+    private String subscriptionPlanName; 
     private LocalDateTime subscriptionExpiresAt;
     @Builder.Default
     private Boolean subscriptionAutoRenew = true;

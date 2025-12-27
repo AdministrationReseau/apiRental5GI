@@ -9,5 +9,5 @@ import java.util.UUID;
 
 @Repository
 public interface SubscriptionRepository extends R2dbcRepository<SubscriptionEntity, UUID> {
-    Mono<SubscriptionEntity> findByOrganizationIdAndStatus(UUID organizationId, String status);
+    Mono<SubscriptionEntity> findByName(String name);
 }

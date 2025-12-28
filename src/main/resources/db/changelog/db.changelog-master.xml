@@ -309,4 +309,11 @@
         <dropNotNullConstraint tableName="postes" columnName="organization_id" columnDataType="UUID"/>
     </changeSet>
 
+    <changeSet id="12-seed-default-poste-sql" author="brayanne">
+        <sqlFile path="seeds/02-default-postes.sql"
+                 relativeToChangelogFile="true"
+                 splitStatements="true"
+                 stripComments="true"/>
+    </changeSet>
+
 </databaseChangeLog>

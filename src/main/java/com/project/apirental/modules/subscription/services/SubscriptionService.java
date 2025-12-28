@@ -66,10 +66,10 @@ public class SubscriptionService {
                         .flatMap(org -> paymentService.processPayment(org.getEmail(), planName, plan.getPrice().doubleValue())
                                 .flatMap(success -> {
                                         // --- LOGIQUE DE TEST : 2 MINUTES AU LIEU DE 30 JOURS ---
-                                    LocalDateTime testExpiry = LocalDateTime.now().plusMinutes(2); 
+                                //     LocalDateTime testExpiry = LocalDateTime.now().plusMinutes(2); 
                                     org.setSubscriptionPlanId(plan.getId());
-                                     org.setSubscriptionExpiresAt(testExpiry);
-                                //     org.setSubscriptionExpiresAt(LocalDateTime.now().plusDays(plan.getDurationDays()));
+                                //      org.setSubscriptionExpiresAt(testExpiry);
+                                    org.setSubscriptionExpiresAt(LocalDateTime.now().plusDays(plan.getDurationDays()));
                                     
                                     SubscriptionEntity subRecord = SubscriptionEntity.builder()
                                             .id(UUID.randomUUID())

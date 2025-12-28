@@ -315,5 +315,30 @@
                  splitStatements="true"
                  stripComments="true"/>
     </changeSet>
+    <changeSet id="13-create-staff-table" author="brayan">
+    <createTable tableName="staff">
+        <column name="id" type="UUID">
+            <constraints primaryKey="true" nullable="false"/>
+        </column>
+        <column name="user_id" type="UUID">
+            <constraints nullable="false" foreignKeyName="fk_staff_user" referencedTableName="users" referencedColumnNames="id"/>
+        </column>
+        <column name="organization_id" type="UUID">
+            <constraints nullable="false" foreignKeyName="fk_staff_org" referencedTableName="organizations" referencedColumnNames="id"/>
+        </column>
+        <column name="agency_id" type="UUID">
+            <constraints nullable="false" foreignKeyName="fk_staff_agency" referencedTableName="agencies" referencedColumnNames="id"/>
+        </column>
+        <column name="poste_id" type="UUID">
+            <constraints nullable="false" foreignKeyName="fk_staff_poste" referencedTableName="postes" referencedColumnNames="id"/>
+        </column>
+        <column name="status" type="VARCHAR(20)" defaultValue="ACTIVE"/>
+        <column name="hired_at" type="TIMESTAMP" defaultValueComputed="NOW()"/>
+    </createTable>
+    <!-- Index pour accélérer les recherches par organisation ou agence -->
+    <createIndex tableName="staff" indexName="idx_staff_org">
+        <column name="organization_id"/>
+    </createIndex>
+</changeSet>
 
 </databaseChangeLog>

@@ -85,4 +85,17 @@ public class PosteService {
                         perms
                 ));
     }
+    /**
+     * Récupère un poste par son ID et l'enrichit avec ses permissions.
+     * Utilisé pour l'affichage détaillé et l'enrichissement du module Staff.
+     */
+    public Mono<PosteResponseDTO> getPosteById(UUID id) {
+        if (id == null) {
+            return Mono.error(new IllegalArgumentException("L'ID du poste ne peut pas être nul"));
+        }
+        
+        return posteRepository.findById(id)
+                .switchIfEmpty(Mono.error(new RuntimeException("Poste non trouvé avec l'ID : " + id)))
+                .flatMap(this::enrichWithPermissions);
+    }
 }

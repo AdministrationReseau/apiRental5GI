@@ -12,6 +12,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -32,7 +33,7 @@ public class PosteService {
                 .isNewRecord(true)
                 .build();
 
-        return posteRepository.save(poste)
+        return posteRepository.save(Objects.requireNonNull(poste))
                 .flatMap(savedPoste -> {
                     // Sauvegarde des liaisons permissions
                     if (request.permissionIds() != null && !request.permissionIds().isEmpty()) {
@@ -53,12 +54,12 @@ public class PosteService {
 
     @Transactional
     public Mono<PosteResponseDTO> updatePoste(UUID posteId, PosteRequestDTO request) {
-        return posteRepository.findById(posteId)
+        return posteRepository.findById(Objects.requireNonNull(posteId))
                 .flatMap(poste -> {
                     if (request.name() != null) poste.setName(request.name());
                     if (request.description() != null) poste.setDescription(request.description());
 
-                    return posteRepository.save(poste)
+                    return posteRepository.save(Objects.requireNonNull(poste))
                             .flatMap(saved -> {
                                 // Mise à jour des permissions : On supprime tout et on remet
                                 if (request.permissionIds() != null) {
@@ -84,5 +85,18 @@ public class PosteService {
                         poste.getDescription(),
                         perms
                 ));
+    }
+    /**
+     * Récupère un poste par son ID et l'enrichit avec ses permissions.
+     * Utilisé pour l'affichage détaillé et l'enrichissement du module Staff.
+     */
+    public Mono<PosteResponseDTO> getPosteById(UUID id) {
+        if (id == null) {
+            return Mono.error(new IllegalArgumentException("L'ID du poste ne peut pas être nul"));
+        }
+        
+        return posteRepository.findById(id)
+                .switchIfEmpty(Mono.error(new RuntimeException("Poste non trouvé avec l'ID : " + id)))
+                .flatMap(this::enrichWithPermissions);
     }
 }

@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.Objects;
 import java.util.UUID;
 
 @RestController
@@ -44,7 +45,7 @@ public class PosteController {
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ORGANIZATION')")
     public Mono<ResponseEntity<PosteResponseDTO>> update(@PathVariable UUID id, @RequestBody PosteRequestDTO request) {
-        return PosteRepository.findById(id)
+        return PosteRepository.findById(Objects.requireNonNull(id))
                 .flatMap(poste -> {
                     // Si l'organizationId est NULL, c'est un poste système : INTERDIT de modifier
                     if (poste.getOrganizationId() == null) {

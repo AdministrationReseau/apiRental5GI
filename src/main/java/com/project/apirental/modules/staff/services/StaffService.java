@@ -76,7 +76,7 @@ public Mono<StaffResponseDTO> addStaffToOrganization(UUID orgId, StaffRequestDTO
                                             .isNewRecord(true)
                                             .build();
 
-                                    return staffRepository.save(staff);
+                                    return staffRepository.save(Objects.requireNonNull(staff));
                                 }))
                         )
                 )
@@ -109,7 +109,7 @@ public Mono<StaffResponseDTO> addStaffToOrganization(UUID orgId, StaffRequestDTO
 
     // READ : Par ID
     public Mono<StaffResponseDTO> getStaffById(UUID id) {
-        return staffRepository.findById(id)
+        return staffRepository.findById(Objects.requireNonNull(id))
                 .flatMap(this::enrichStaff)
                 .switchIfEmpty(Mono.error(new RuntimeException("Staff non trouvé")));
     }
@@ -123,7 +123,7 @@ public Mono<StaffResponseDTO> addStaffToOrganization(UUID orgId, StaffRequestDTO
     // UPDATE : Changer de poste, d'agence ou de statut
     @Transactional
     public Mono<StaffResponseDTO> updateStaff(UUID staffId, StaffUpdateDTO request) {
-        return staffRepository.findById(staffId)
+        return staffRepository.findById(Objects.requireNonNull(staffId))
                 .flatMap(staff -> {
                     UUID oldAgencyId = staff.getAgencyId();
                     UUID newAgencyId = request.agencyId();
@@ -152,8 +152,8 @@ public Mono<StaffResponseDTO> addStaffToOrganization(UUID orgId, StaffRequestDTO
     // DELETE : Supprimer un membre du staff
     @Transactional
     public Mono<Void> deleteStaff(UUID staffId) {
-        return staffRepository.findById(staffId)
-                .flatMap(staff -> staffRepository.delete(staff)
+        return staffRepository.findById(Objects.requireNonNull(staffId))
+                .flatMap(staff -> staffRepository.delete(Objects.requireNonNull(staff))
                         .then(organizationService.updateStaffCounter(staff.getOrganizationId(), -1))
                         .then(updateAgencyCounter(staff.getAgencyId(), -1)))
                 .doOnSuccess(v -> eventPublisher
@@ -162,7 +162,7 @@ public Mono<StaffResponseDTO> addStaffToOrganization(UUID orgId, StaffRequestDTO
 
     // HELPERS
     private Mono<Void> updateAgencyCounter(UUID agencyId, int increment) {
-        return agencyRepository.findById(agencyId)
+        return agencyRepository.findById(Objects.requireNonNull(agencyId))
                 .flatMap(agency -> {
                     agency.setTotalPersonnel(agency.getTotalPersonnel() + increment);
                     return agencyRepository.save(agency);
@@ -171,7 +171,7 @@ public Mono<StaffResponseDTO> addStaffToOrganization(UUID orgId, StaffRequestDTO
 
     private Mono<StaffResponseDTO> enrichStaff(StaffEntity staff) {
         return Mono.zip(
-                userRepository.findById(staff.getUserId()),
+                userRepository.findById(Objects.requireNonNull(staff.getUserId())),
                 posteService.getPosteById(staff.getPosteId()))
                 .map(tuple -> staffMapper.toDto(staff, tuple.getT1(), tuple.getT2()));
     }

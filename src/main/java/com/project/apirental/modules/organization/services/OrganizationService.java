@@ -82,7 +82,7 @@ public class OrganizationService {
                     if (request.taxNumber() != null)
                         org.setTaxNumber(request.taxNumber());
 
-                    return organizationRepository.save(org)
+                    return organizationRepository.save(Objects.requireNonNull(org))
                             .doOnSuccess(updatedOrg -> {
                                 eventPublisher.publishEvent(new AuditEvent(
                                         "UPDATE_ORG",
@@ -155,7 +155,7 @@ public class OrganizationService {
                                 if (!newLicenseUrl.isEmpty())
                                     org.setBusinessLicense(newLicenseUrl);
 
-                                return organizationRepository.save(org);
+                                return organizationRepository.save(Objects.requireNonNull(org));
                             });
                 })
                 .doOnSuccess(updatedOrg -> eventPublisher.publishEvent(new AuditEvent(

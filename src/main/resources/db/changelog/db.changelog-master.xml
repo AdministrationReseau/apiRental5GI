@@ -176,8 +176,8 @@
 
     <!-- 9. Ajustement de la table Organizations pour pointer vers l'ID du plan -->
     <changeSet id="9-update-org-subscription-link" author="hassana">
-        <addForeignKeyConstraint baseTableName="organizations" baseColumnNames="subscription_plan_id" 
-                                 constraintName="fk_org_sub_plan" referencedTableName="subscription_plans" 
+        <addForeignKeyConstraint baseTableName="organizations" baseColumnNames="subscription_plan_id"
+                                 constraintName="fk_org_sub_plan" referencedTableName="subscription_plans"
                                  referencedColumnNames="id"/>
     </changeSet>
     <changeSet id="7-create-medias-table" author="brayanne">
@@ -210,7 +210,7 @@
                 <constraints nullable="false"/>
             </column>
             <column name="description" type="TEXT"/>
-            
+
             <!-- Location -->
             <column name="address" type="VARCHAR(255)"/>
             <column name="city" type="VARCHAR(100)"/>
@@ -252,6 +252,68 @@
             <column name="total_rentals" type="INTEGER" defaultValue="0"/>
             <column name="monthly_revenue" type="DOUBLE PRECISION" defaultValue="0.0"/>
         </createTable>
+    </changeSet>
+
+    <changeSet id="9-create-permissions-postes" author="brayanne">
+
+        <createTable tableName="permissions">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="TEXT"/>
+            <column name="tag" type="VARCHAR(100)">
+                <constraints unique="true" nullable="false"/>
+            </column>
+            <column name="module" type="VARCHAR(50)"/>
+        </createTable>
+
+        <createTable tableName="postes">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="organization_id" type="UUID">
+                <constraints foreignKeyName="fk_poste_org" referencedTableName="organizations" referencedColumnNames="id"/>
+            </column>
+            <column name="name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="TEXT"/>
+            <column name="created_at" type="TIMESTAMP"/>
+        </createTable>
+
+        <createTable tableName="postes_permissions">
+            <column name="poste_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_pp_poste" referencedTableName="postes" referencedColumnNames="id" deleteCascade="true"/>
+            </column>
+            <column name="permission_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_pp_perm" referencedTableName="permissions" referencedColumnNames="id" deleteCascade="true"/>
+            </column>
+        </createTable>
+
+        <addPrimaryKey tableName="postes_permissions"
+                       columnNames="poste_id, permission_id"
+                       constraintName="pk_postes_permissions"/>
+    </changeSet>
+
+    <changeSet id="10-seed-permissions-sql" author="brayanne">
+        <sqlFile path="seeds/01-permissions.sql"
+                 relativeToChangelogFile="true"
+                 splitStatements="true"
+                 stripComments="true"/>
+    </changeSet>
+
+    <changeSet id="11-allow-null-org-poste" author="brayanne">
+        <dropNotNullConstraint tableName="postes" columnName="organization_id" columnDataType="UUID"/>
+    </changeSet>
+
+    <changeSet id="12-seed-default-poste-sql" author="brayanne">
+        <sqlFile path="seeds/02-default-postes.sql"
+                 relativeToChangelogFile="true"
+                 splitStatements="true"
+                 stripComments="true"/>
     </changeSet>
 
 </databaseChangeLog>

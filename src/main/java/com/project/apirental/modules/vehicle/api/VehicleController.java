@@ -26,7 +26,7 @@ public class VehicleController {
 
     @Operation(summary = "Ajouter un véhicule à la flotte (Vérifie les quotas)")
     @PostMapping("/org/{orgId}")
-    @PreAuthorize("hasRole('ORGANIZATION')")
+    @PreAuthorize("hasRole('ORGANIZATION') or @rbac.hasPermission(#orgId, 'vehicle:create')")
     public Mono<ResponseEntity<VehicleResponseDTO>> create(@PathVariable UUID orgId, @RequestBody VehicleRequestDTO request) {
         return vehicleService.createVehicle(orgId, request).map(ResponseEntity::ok);
     }
@@ -52,22 +52,22 @@ public class VehicleController {
 
     @Operation(summary = "Mettre à jour les informations d'un véhicule")
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ORGANIZATION') or hasRole('AGENT')")
+    @PreAuthorize("hasRole('ORGANIZATION') or hasRole('AGENT') or @rbac.hasPermission(#orgId, 'vehicle:update')")
     public Mono<ResponseEntity<VehicleResponseDTO>> update(@PathVariable UUID id, @RequestBody VehicleRequestDTO request) {
         return vehicleService.updateVehicle(id, request).map(ResponseEntity::ok);
     }
 
     @Operation(summary = "Changer le statut du véhicule (MAINTENANCE, AVAILABLE, RENTED)")
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasRole('ORGANIZATION') or hasRole('AGENT')")
+    @PreAuthorize("hasRole('ORGANIZATION') or hasRole('AGENT') or @rbac.hasPermission(#orgId, 'vehicle:update')")
     public Mono<ResponseEntity<VehicleResponseDTO>> updateStatus(@PathVariable UUID id, @RequestParam String status) {
         return vehicleService.updateVehicleStatus(id, status).map(ResponseEntity::ok);
     }
 
     @Operation(summary = "Supprimer un véhicule (Met à jour les compteurs)")
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ORGANIZATION')")
-    public Mono<ResponseEntity<Void>> delete(@PathVariable UUID id) {
+    @PreAuthorize("hasRole('ORGANIZATION') or @rbac.hasPermission(#orgId, 'vehicle:delete')")
+     public Mono<ResponseEntity<Void>> delete(@PathVariable UUID id) {
         return vehicleService.deleteVehicle(id).then(Mono.just(ResponseEntity.noContent().build()));
     }
 }

@@ -34,7 +34,7 @@ public class AgencyController {
 
     @Operation(summary = "Obtenir les détails d'une agence")
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ORGANIZATION', 'ADMIN', 'AGENT')")
+    // @PreAuthorize("hasAnyRole('ORGANIZATION', 'ADMIN', 'AGENT')")
     public Mono<ResponseEntity<AgencyResponseDTO>> getById(@PathVariable UUID id) {
         return agencyService.getAgency(id).map(ResponseEntity::ok);
     }
@@ -49,14 +49,14 @@ public class AgencyController {
 
     @Operation(summary = "Modifier une agence")
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ORGANIZATION')")
+    @PreAuthorize("hasRole('ORGANIZATION') or @rbac.hasPermission(#id, 'agency:update')")
     public Mono<ResponseEntity<AgencyResponseDTO>> update(@PathVariable UUID id, @RequestBody AgencyRequestDTO request) {
         return agencyService.updateAgency(id, request).map(ResponseEntity::ok);
     }
 
     @Operation(summary = "Supprimer une agence")
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ORGANIZATION')")
+    @PreAuthorize("hasRole('ORGANIZATION') or @rbac.canAccessAgency(#id, 'agency:delete'")
     public Mono<ResponseEntity<Void>> delete(@PathVariable UUID id) {
         return agencyService.deleteAgency(id).then(Mono.just(ResponseEntity.noContent().build()));
     }

@@ -2,32 +2,25 @@ package com.project.apirental.modules.staff.services;
 
 import com.project.apirental.modules.agency.repository.AgencyRepository;
 import com.project.apirental.modules.auth.domain.UserEntity;
-import com.project.apirental.modules.auth.repository.UserRepository;
 import com.project.apirental.modules.organization.domain.OrganizationEntity;
 import com.project.apirental.modules.organization.repository.OrganizationRepository;
 import com.project.apirental.modules.organization.services.OrganizationService;
 import com.project.apirental.modules.poste.services.PosteService;
-import com.project.apirental.modules.staff.domain.StaffEntity;
-import com.project.apirental.modules.staff.dto.StaffRequestDTO;
-import com.project.apirental.modules.staff.dto.StaffResponseDTO;
-import com.project.apirental.modules.staff.dto.StaffUpdateDTO;
+import com.project.apirental.modules.staff.dto.*;
 import com.project.apirental.modules.staff.mapper.StaffMapper;
 import com.project.apirental.modules.staff.repository.StaffRepository;
 import com.project.apirental.modules.subscription.repository.SubscriptionPlanRepository;
 import com.project.apirental.shared.events.AuditEvent;
-
-// import com.project.apirental.shared.events.AuditEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
 import java.util.Objects;
-// import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -35,39 +28,44 @@ import java.util.UUID;
 public class StaffService {
 
     private final StaffRepository staffRepository;
-    private final UserRepository userRepository;
-    private final AgencyRepository agencyRepository;
-    private final OrganizationService organizationService;
     private final OrganizationRepository organizationRepository;
-    private final SubscriptionPlanRepository   planRepository;
+    private final SubscriptionPlanRepository planRepository;
+    private final OrganizationService organizationService;
+    private final AgencyRepository agencyRepository;
     private final PosteService posteService;
     private final StaffMapper staffMapper;
+    private final PasswordEncoder passwordEncoder;
     private final ApplicationEventPublisher eventPublisher;
-    // private final ApplicationEventPublisher eventPublisher;
+
+    // Dans StaffService.java
 
     @Transactional
-public Mono<StaffResponseDTO> addStaffToOrganization(UUID orgId, StaffRequestDTO request) {
-    return userRepository.findByEmail(request.userEmail())
-        .switchIfEmpty(Mono.<UserEntity>error(new RuntimeException("Utilisateur non trouvé")))
-        .flatMap(user -> 
-            organizationRepository.findById(Objects.requireNonNull(orgId))
-                .switchIfEmpty(Mono.<OrganizationEntity>error(new RuntimeException("Organisation non trouvée")))
-                .flatMap(org -> 
-                    planRepository.findById(Objects.requireNonNull(org.getSubscriptionPlanId()))
-                        .flatMap(plan -> 
-                            staffRepository.findByUserIdAndOrganizationId(user.getId(), orgId)
-                                // ICI : On précise <StaffEntity> pour que le compilateur sache quoi attendre
-                                .flatMap(existing -> Mono.<StaffEntity>error(new RuntimeException("Déjà membre du personnel")))
-                                .switchIfEmpty(Mono.defer(() -> {
-                                    
-                                    // ICI : On précise aussi pour le quota
-                                    if (org.getCurrentUsers() >= plan.getMaxUsers()) {
-                                        return Mono.<StaffEntity>error(new RuntimeException("Quota atteint"));
+    public Mono<StaffResponseDTO> addStaffToOrganization(UUID orgId, StaffRequestDTO request) {
+        return staffRepository.findByEmail(request.email())
+                .flatMap(existing -> Mono.<UserEntity>error(new RuntimeException("Cet email est déjà utilisé")))
+                .switchIfEmpty(Mono.defer(() -> organizationRepository.findById(orgId)
+                        .switchIfEmpty(Mono.<OrganizationEntity>error(new RuntimeException("Organisation non trouvée")))
+                        .flatMap(org -> planRepository.findById(Objects.requireNonNull(org.getSubscriptionPlanId()))
+                                .flatMap(plan -> {
+
+                                    // Debug log pour vérifier les valeurs en cas de blocage
+                                    int current = (org.getCurrentUsers() != null) ? org.getCurrentUsers() : 0;
+                                    int max = (plan.getMaxUsers() != null) ? plan.getMaxUsers() : 0;
+
+                                    if (current >= max) {
+                                        return Mono.<UserEntity>error(new RuntimeException(
+                                                "Quota atteint : " + current + " / " + max
+                                                        + " utilisateurs utilisés."));
                                     }
 
-                                    StaffEntity staff = StaffEntity.builder()
+                                    UserEntity newUser = UserEntity.builder()
                                             .id(UUID.randomUUID())
-                                            .userId(user.getId())
+                                            .firstname(request.firstname())
+                                            .lastname(request.lastname())
+                                            .fullname(request.firstname() + " " + request.lastname())
+                                            .email(request.email())
+                                            .password(passwordEncoder.encode("motdepasse"))
+                                            .role("STAFF")
                                             .organizationId(orgId)
                                             .agencyId(request.agencyId())
                                             .posteId(request.posteId())
@@ -76,22 +74,40 @@ public Mono<StaffResponseDTO> addStaffToOrganization(UUID orgId, StaffRequestDTO
                                             .isNewRecord(true)
                                             .build();
 
-                                    return staffRepository.save(Objects.requireNonNull(staff));
-                                }))
-                        )
-                )
-                // Une fois que tout le bloc interne a renvoyé un StaffEntity, on l'enrichit
-                .flatMap(savedStaff -> 
-                    organizationService.updateStaffCounter(orgId, 1) // On incrémente l'org
-                        .then(updateAgencyStaffCounter(request.agencyId(), 1)) // On incrémente l'agence
-                        .then(enrichStaff(savedStaff)) // On transforme en DTO
-                )
-        );
-}
+                                    return staffRepository.save(newUser)
+                                            .flatMap(savedUser -> organizationService.updateStaffCounter(orgId, 1)
+                                                    .then(updateAgencyStaffCounter(request.agencyId(), 1))
+                                                    .thenReturn(savedUser));
+                                }))))
+                .flatMap(this::enrichStaff);
+    }
 
-    /**
-     * Helper pour mettre à jour le compteur spécifique de l'agence
-     */
+    public Flux<StaffResponseDTO> getStaffByOrganization(UUID orgId) {
+        return staffRepository.findAllStaffByOrganizationId(orgId)
+                .flatMap(this::enrichStaff);
+    }
+
+    public Flux<StaffResponseDTO> getStaffByAgency(UUID agencyId) {
+        return staffRepository.findAllStaffByAgencyId(agencyId)
+                .flatMap(this::enrichStaff);
+    }
+
+    public Mono<StaffResponseDTO> getStaffById(UUID id) {
+        return staffRepository.findById(id)
+                .flatMap(this::enrichStaff)
+                .switchIfEmpty(Mono.error(new RuntimeException("Staff non trouvé")));
+    }
+
+    @Transactional
+    public Mono<Void> deleteStaff(UUID id) {
+        return staffRepository.findById(id)
+                .flatMap(user -> staffRepository.delete(user)
+                        .then(organizationService.updateStaffCounter(user.getOrganizationId(), -1))
+                        .then(updateAgencyStaffCounter(user.getAgencyId(), -1)))
+                .doOnSuccess(v -> eventPublisher
+                        .publishEvent(new AuditEvent("DELETE_STAFF", "STAFF", "Staff supprimé ID: " + id)));
+    }
+
     private Mono<Void> updateAgencyStaffCounter(UUID agencyId, int increment) {
         return agencyRepository.findById(Objects.requireNonNull(agencyId))
                 .flatMap(agency -> {
@@ -100,80 +116,47 @@ public Mono<StaffResponseDTO> addStaffToOrganization(UUID orgId, StaffRequestDTO
                 }).then();
     }
 
-    // READ : Liste par Agence
-
-    public Flux<StaffResponseDTO> getStaffByAgency(UUID agencyId) {
-        return staffRepository.findAllByAgencyId(agencyId)
-                .flatMap(this::enrichStaff);
+    private Mono<StaffResponseDTO> enrichStaff(UserEntity staff) {
+        return posteService.getPosteById(staff.getPosteId())
+                .map(posteDto -> staffMapper.toDto(staff, posteDto));
     }
 
-    // READ : Par ID
-    public Mono<StaffResponseDTO> getStaffById(UUID id) {
-        return staffRepository.findById(Objects.requireNonNull(id))
-                .flatMap(this::enrichStaff)
-                .switchIfEmpty(Mono.error(new RuntimeException("Staff non trouvé")));
-    }
-
-    // READ : Liste par Organisation
-    public Flux<StaffResponseDTO> getStaffByOrganization(UUID orgId) {
-        return staffRepository.findAllByOrganizationId(orgId)
-                .flatMap(this::enrichStaff);
-    }
-
-    // UPDATE : Changer de poste, d'agence ou de statut
     @Transactional
     public Mono<StaffResponseDTO> updateStaff(UUID staffId, StaffUpdateDTO request) {
         return staffRepository.findById(Objects.requireNonNull(staffId))
-                .flatMap(staff -> {
-                    UUID oldAgencyId = staff.getAgencyId();
+                .switchIfEmpty(Mono.<UserEntity>error(new RuntimeException("Staff non trouvé")))
+                .flatMap(user -> {
+                    UUID oldAgencyId = user.getAgencyId();
                     UUID newAgencyId = request.agencyId();
 
-                    // Si on change d'agence, on gère les compteurs
+                    // 1. Gestion du changement d'agence (Compteurs)
                     Mono<Void> counterUpdate = Mono.empty();
                     if (newAgencyId != null && !newAgencyId.equals(oldAgencyId)) {
-                        staff.setAgencyId(newAgencyId);
-                        counterUpdate = updateAgencyCounter(oldAgencyId, -1)
-                                .then(updateAgencyCounter(newAgencyId, 1));
+                        user.setAgencyId(newAgencyId);
+                        // On décrémente l'ancienne agence et on incrémente la nouvelle
+                        counterUpdate = updateAgencyStaffCounter(oldAgencyId, -1)
+                                .then(updateAgencyStaffCounter(newAgencyId, 1));
                     }
 
+                    // 2. Mise à jour des champs basiques
+                    if (request.firstname() != null)
+                        user.setFirstname(request.firstname());
+                    if (request.lastname() != null)
+                        user.setLastname(request.lastname());
                     if (request.posteId() != null)
-                        staff.setPosteId(request.posteId());
+                        user.setPosteId(request.posteId());
                     if (request.status() != null)
-                        staff.setStatus(request.status());
+                        user.setStatus(request.status());
 
+                    // Recalculer le fullname si nécessaire
+                    user.setFullname(user.getFirstname() + " " + user.getLastname());
+
+                    // 3. Sauvegarde et enrichissement
                     return counterUpdate
-                            .then(staffRepository.save(staff))
+                            .then(staffRepository.save(user))
                             .flatMap(this::enrichStaff);
                 })
-                .doOnSuccess(s -> eventPublisher
-                        .publishEvent(new AuditEvent("UPDATE_STAFF", "STAFF", "Staff mis à jour ID: " + staffId)));
+                .doOnSuccess(s -> eventPublisher.publishEvent(
+                        new AuditEvent("UPDATE_STAFF", "STAFF", "Mise à jour du staff : " + s.email())));
     }
-
-    // DELETE : Supprimer un membre du staff
-    @Transactional
-    public Mono<Void> deleteStaff(UUID staffId) {
-        return staffRepository.findById(Objects.requireNonNull(staffId))
-                .flatMap(staff -> staffRepository.delete(Objects.requireNonNull(staff))
-                        .then(organizationService.updateStaffCounter(staff.getOrganizationId(), -1))
-                        .then(updateAgencyCounter(staff.getAgencyId(), -1)))
-                .doOnSuccess(v -> eventPublisher
-                        .publishEvent(new AuditEvent("DELETE_STAFF", "STAFF", "Staff supprimé ID: " + staffId)));
-    }
-
-    // HELPERS
-    private Mono<Void> updateAgencyCounter(UUID agencyId, int increment) {
-        return agencyRepository.findById(Objects.requireNonNull(agencyId))
-                .flatMap(agency -> {
-                    agency.setTotalPersonnel(agency.getTotalPersonnel() + increment);
-                    return agencyRepository.save(agency);
-                }).then();
-    }
-
-    private Mono<StaffResponseDTO> enrichStaff(StaffEntity staff) {
-        return Mono.zip(
-                userRepository.findById(Objects.requireNonNull(staff.getUserId())),
-                posteService.getPosteById(staff.getPosteId()))
-                .map(tuple -> staffMapper.toDto(staff, tuple.getT1(), tuple.getT2()));
-    }
-
 }

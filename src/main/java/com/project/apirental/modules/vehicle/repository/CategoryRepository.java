@@ -5,6 +5,8 @@ import org.springframework.data.r2dbc.repository.Query;
 import org.springframework.data.r2dbc.repository.R2dbcRepository;
 import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
 import java.util.UUID;
 
 @Repository
@@ -22,4 +24,8 @@ public interface CategoryRepository extends R2dbcRepository<VehicleCategoryEntit
            "WHERE organization_id = (SELECT organization_id FROM agencies WHERE id = :agencyId) " +
            "OR organization_id IS NULL ORDER BY name ASC")
     Flux<VehicleCategoryEntity> findAllByAgencyIdOrSystem(UUID agencyId);
+    // Dans CategoryRepository.java
+
+    @Query("SELECT organization_id FROM vehicle_categories WHERE id = :categoryId")
+    Mono<UUID> findOrgIdByCategoryId(UUID categoryId);
 }

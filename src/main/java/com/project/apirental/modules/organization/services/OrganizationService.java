@@ -183,7 +183,7 @@ public class OrganizationService {
                hasText(org.getRegistrationNumber()) &&
                hasText(org.getTaxNumber()) &&
                // Fichiers
-               hasText(org.getBusinessLicense()) &&
+            //    hasText(org.getBusinessLicense()) &&
                hasText(org.getLogoUrl());
     }
 

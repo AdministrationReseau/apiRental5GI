@@ -1,4 +1,4 @@
-package com.project.apirental.modules.staff.domain;
+package com.project.apirental.modules.driver.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
@@ -6,6 +6,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
 import org.springframework.data.domain.Persistable;
 import org.springframework.data.relational.core.mapping.Table;
+
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -13,18 +14,30 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table("staff")
-public class StaffEntity implements Persistable<UUID> {
+@Table("drivers")
+public class DriverEntity implements Persistable<UUID> {
+
     @Id
     private UUID id;
-    private UUID userId;
     private UUID organizationId;
     private UUID agencyId;
-    private UUID posteId;
-    
+
+    private String firstname;
+    private String lastname;
+    private String tel;
+    private Integer age;
+    private Integer gender; // 0: Homme, 1: Femme 
+
+    // URLs stockées après upload via MediaService
+    private String profilUrl;
+    private String cniUrl;
+    private String drivingLicenseUrl;
+
     @Builder.Default
-    private String status = "ACTIVE";
-    private LocalDateTime hiredAt;
+    private String status = "ACTIVE"; // ACTIVE, INACTIVE
+
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
     @Transient
     @Builder.Default

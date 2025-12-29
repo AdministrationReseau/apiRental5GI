@@ -25,41 +25,49 @@ public class StaffController {
 
     @Operation(summary = "Ajouter un membre au staff d'une organisation")
     @PostMapping("/org/{orgId}")
-    @PreAuthorize("hasRole('ORGANIZATION')")
-    public Mono<ResponseEntity<StaffResponseDTO>> create(@PathVariable UUID orgId, @RequestBody StaffRequestDTO request) {
+    @PreAuthorize("hasRole('ORGANIZATION') or @rbac.hasPermission(#orgId, 'staff:create')")
+    // @PreAuthorize("@rbac.hasPermission(#orgId, 'staff:create')")
+    public Mono<ResponseEntity<StaffResponseDTO>> create(@PathVariable UUID orgId,
+            @RequestBody StaffRequestDTO request) {
         return staffService.addStaffToOrganization(orgId, request).map(ResponseEntity::ok);
     }
 
     @Operation(summary = "Lister tout le staff d'une organisation")
     @GetMapping("/org/{orgId}")
-    @PreAuthorize("hasRole('ORGANIZATION') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ORGANIZATION') or @rbac.hasPermission(#orgId, 'staff:list') or hasRole('ADMIN')")
     public Flux<StaffResponseDTO> getByOrg(@PathVariable UUID orgId) {
         return staffService.getStaffByOrganization(orgId);
     }
 
     @Operation(summary = "Lister le staff d'une agence")
     @GetMapping("/agency/{agencyId}")
-    @PreAuthorize("hasRole('ORGANIZATION') or hasRole('AGENT')")
+    @PreAuthorize("hasRole('ORGANIZATION') or @rbac.hasPermission(#orgId, 'staff:list') or hasRole('AGENT')")
     public Flux<StaffResponseDTO> getByAgency(@PathVariable UUID agencyId) {
         return staffService.getStaffByAgency(agencyId);
     }
 
     @Operation(summary = "Obtenir les détails d'un membre du staff")
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ORGANIZATION') or @rbac.hasPermission(#orgId, 'staff:update')")
     public Mono<ResponseEntity<StaffResponseDTO>> getById(@PathVariable UUID id) {
         return staffService.getStaffById(id).map(ResponseEntity::ok);
     }
 
-    @Operation(summary = "Modifier un membre du staff (Poste, Agence, Statut)")
+    // Dans StaffController.java
+
+    @Operation(summary = "Modifier les informations d'un membre du personnel")
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ORGANIZATION')")
-    public Mono<ResponseEntity<StaffResponseDTO>> update(@PathVariable UUID id, @RequestBody StaffUpdateDTO request) {
-        return staffService.updateStaff(id, request).map(ResponseEntity::ok);
+    @PreAuthorize("hasRole('ORGANIZATION') or @rbac.canAccessStaffMember(#id, 'staff:update')")
+    public Mono<ResponseEntity<StaffResponseDTO>> update(
+            @PathVariable UUID id,
+            @RequestBody StaffUpdateDTO request) {
+        return staffService.updateStaff(id, request)
+                .map(ResponseEntity::ok);
     }
 
-    @Operation(summary = "Supprimer un membre du staff")
+    @Operation(summary = "Supprimer (désactiver) un membre du staff")
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ORGANIZATION')")
+    @PreAuthorize("hasRole('ORGANIZATION') or @rbac.hasPermission(#orgId, 'staff:delete')")
     public Mono<ResponseEntity<Void>> delete(@PathVariable UUID id) {
         return staffService.deleteStaff(id).then(Mono.just(ResponseEntity.noContent().build()));
     }

@@ -4,13 +4,16 @@ import com.project.apirental.modules.media.domain.MediaEntity;
 import com.project.apirental.modules.media.services.MediaService;
 import com.project.apirental.modules.organization.dto.OrgResponseDTO;
 import com.project.apirental.modules.organization.dto.OrgUpdateDTO;
+import com.project.apirental.modules.organization.dto.OrgUserResponseDTO;
 import com.project.apirental.modules.organization.mapper.OrgMapper;
 import com.project.apirental.modules.organization.repository.OrganizationRepository;
 import com.project.apirental.modules.subscription.repository.SubscriptionPlanRepository;
+import com.project.apirental.modules.auth.repository.UserRepository;
 import com.project.apirental.shared.events.AuditEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.codec.multipart.FilePart;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Flux;
@@ -28,6 +31,7 @@ public class OrganizationService {
     private final OrgMapper orgMapper;
     private final ApplicationEventPublisher eventPublisher;
     private final MediaService mediaService;
+    private final UserRepository userRepository;
 
     public Mono<OrgResponseDTO> getOrganization(UUID id) {
         if (id == null) {
@@ -123,37 +127,36 @@ public class OrganizationService {
                                 String newLicenseUrl = tuple.getT2();
 
                                 // Mise à jour des champs texte (si non nuls dans la requête)
-                                if (request.name() != null)
-                                    org.setName(request.name());
-                                if (request.description() != null)
-                                    org.setDescription(request.description());
-                                if (request.phone() != null)
-                                    org.setPhone(request.phone());
-                                if (request.email() != null)
-                                    org.setEmail(request.email());
-                                if (request.address() != null)
-                                    org.setAddress(request.address());
-                                if (request.city() != null)
-                                    org.setCity(request.city());
-                                if (request.postalCode() != null)
-                                    org.setPostalCode(request.postalCode());
-                                if (request.region() != null)
-                                    org.setRegion(request.region());
-                                if (request.website() != null)
-                                    org.setWebsite(request.website());
-                                if (request.timezone() != null)
-                                    org.setTimezone(request.timezone());
-                                if (request.registrationNumber() != null)
-                                    org.setRegistrationNumber(request.registrationNumber());
-                                if (request.taxNumber() != null)
-                                    org.setTaxNumber(request.taxNumber());
+                                if (request.name() != null) org.setName(request.name());
+                                if (request.description() != null) org.setDescription(request.description());
+                                if (request.phone() != null) org.setPhone(request.phone());
+                                if (request.email() != null) org.setEmail(request.email());
+                                if (request.address() != null) org.setAddress(request.address());
+                                if (request.city() != null) org.setCity(request.city());
+                                if (request.postalCode() != null) org.setPostalCode(request.postalCode());
+                                if (request.region() != null) org.setRegion(request.region());
+                                if (request.website() != null) org.setWebsite(request.website());
+                                if (request.timezone() != null) org.setTimezone(request.timezone());
+                                if (request.registrationNumber() != null) org.setRegistrationNumber(request.registrationNumber());
+                                if (request.taxNumber() != null) org.setTaxNumber(request.taxNumber());
 
-                                // Mise à jour des URLs seulement si on a une valeur (nouvelle ou ancienne
-                                // récupérée)
-                                if (!newLogoUrl.isEmpty())
-                                    org.setLogoUrl(newLogoUrl);
-                                if (!newLicenseUrl.isEmpty())
-                                    org.setBusinessLicense(newLicenseUrl);
+                                // Mise à jour des URLs seulement si on a une valeur (nouvelle ou ancienne récupérée)
+                                if (!newLogoUrl.isEmpty()) org.setLogoUrl(newLogoUrl);
+                                if (!newLicenseUrl.isEmpty()) org.setBusinessLicense(newLicenseUrl);
+
+                                boolean isProfileComplete = checkProfileCompleteness(org);
+
+                                if (isProfileComplete) {
+                                    // Si tout est complet et qu'il n'était pas encore vérifié
+                                    if (!Boolean.TRUE.equals(org.getIsVerified())) {
+                                        org.setIsVerified(true);
+                                        org.setVerificationDate(java.time.LocalDateTime.now());
+                                    }
+                                } else {
+                                    // Si des infos manquent (suppression ou non remplies), on retire la vérification
+                                    org.setIsVerified(false);
+                                    org.setVerificationDate(null);
+                                }
 
                                 return organizationRepository.save(Objects.requireNonNull(org));
                             });
@@ -161,9 +164,31 @@ public class OrganizationService {
                 .doOnSuccess(updatedOrg -> eventPublisher.publishEvent(new AuditEvent(
                         "UPDATE_ORG_MEDIA",
                         "ORGANIZATION",
-                        "Updated organization with media: " + updatedOrg.getName())))
+                        "Updated organization with media. Verified status: " + updatedOrg.getIsVerified())))
                 .map(orgMapper::toDto)
                 .switchIfEmpty(Mono.error(new RuntimeException("Organization not found")));
+    }
+
+    /**
+     * Méthode helper pour vérifier si toutes les données critiques sont présentes
+     */
+    private boolean checkProfileCompleteness(com.project.apirental.modules.organization.domain.OrganizationEntity org) {
+        return hasText(org.getName()) &&
+               hasText(org.getDescription()) &&
+               hasText(org.getAddress()) &&
+               hasText(org.getCity()) &&
+               hasText(org.getPhone()) &&
+               hasText(org.getEmail()) &&
+               // Champs Légaux Critiques
+               hasText(org.getRegistrationNumber()) &&
+               hasText(org.getTaxNumber()) &&
+               // Fichiers
+               hasText(org.getBusinessLicense()) &&
+               hasText(org.getLogoUrl());
+    }
+
+    private boolean hasText(String str) {
+        return str != null && !str.trim().isEmpty();
     }
 
     /**
@@ -230,5 +255,18 @@ public class OrganizationService {
                             default -> false;
                         }))
                 .defaultIfEmpty(false);
+    }
+
+    public Mono<OrgUserResponseDTO> getCurrentOrgAndUser() {
+        return ReactiveSecurityContextHolder.getContext()
+            .map(ctx -> ctx.getAuthentication().getName()) // Récupère l'email du token
+            .flatMap(userRepository::findByEmail) // Récupère l'utilisateur complet
+            .flatMap(user -> {
+                // Une fois l'utilisateur trouvé, on cherche son organisation (via ownerId)
+                return organizationRepository.findByOwnerId(user.getId())
+                    .map(org -> new OrgUserResponseDTO(user, orgMapper.toDto(org)))
+                    // Si l'utilisateur n'a pas d'organisation, on renvoie null
+                    .defaultIfEmpty(new OrgUserResponseDTO(user, null));
+            });
     }
 }

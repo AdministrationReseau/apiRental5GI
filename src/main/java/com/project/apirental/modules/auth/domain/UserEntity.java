@@ -1,5 +1,6 @@
 package com.project.apirental.modules.auth.domain;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -26,6 +27,13 @@ public class UserEntity implements Persistable<UUID> {
     private String email;
     private String password;
     private String role;
+    
+    // Nouveaux champs Staff
+    private UUID organizationId;
+    private UUID agencyId;
+    private UUID posteId;
+    private String status;
+    private LocalDateTime hiredAt;
 
     // Champ technique pour indiquer à R2DBC si c'est un INSERT ou UPDATE
     @Transient

@@ -28,3 +28,4 @@ INSERT INTO permissions (id, name, description, tag, module) VALUES (gen_random_
 INSERT INTO permissions (id, name, description, tag, module) VALUES (gen_random_uuid(), 'Delete Driver', 'Supprimer un chauffeur', 'driver:delete', 'DRIVER') ON CONFLICT (tag) DO NOTHING;
 INSERT INTO permissions (id, name, description, tag, module) VALUES (gen_random_uuid(), 'List Drivers', 'Lister les chauffeurs disponibles', 'driver:list', 'DRIVER') ON CONFLICT (tag) DO NOTHING;
 INSERT INTO permissions (id, name, description, tag, module) VALUES (gen_random_uuid(), 'Assign Driver', 'Assigner un chauffeur à une course ou un véhicule', 'driver:assign', 'DRIVER') ON CONFLICT (tag) DO NOTHING;
+

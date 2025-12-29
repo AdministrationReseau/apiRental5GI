@@ -6,12 +6,19 @@ public record AgencyResponseDTO(
     UUID id,
     UUID organizationId,
     String name,
+    String description,
     String address,
     String city,
-    String email,
+    String country,
     String phone,
-    Integer activeVehicles,
-    Integer totalVehicles,
+    String email,
+    UUID managerId,
+    Double latitude,
+    Double longitude,
+    Boolean is24Hours,
+    String timezone,
+    String workingHours,
+    Boolean allowOnlineBooking,
+    Double depositPercentage,
     String logoUrl
-    // Ajoutez d'autres champs selon les besoins du frontend
 ) {}

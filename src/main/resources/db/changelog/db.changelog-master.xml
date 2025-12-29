@@ -341,4 +341,57 @@
     </createIndex>
 </changeSet>
 
+    <!-- Table des Véhicules -->
+    <changeSet id="14-vehicles" author="hassana">
+        <createTable tableName="vehicles">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="organization_id" type="UUID"><constraints nullable="false"/></column>
+            <column name="agency_id" type="UUID"><constraints nullable="false"/></column>
+            <column name="category_id" type="UUID"><constraints nullable="false"/></column>
+            
+            <column name="immatriculation" type="VARCHAR(20)"><constraints unique="true" nullable="false"/></column>
+            <column name="marque" type="VARCHAR(100)"/><column name="modele" type="VARCHAR(100)"/>
+            <column name="kilometrage" type="DOUBLE PRECISION" defaultValue="0.0"/>
+            <column name="transmission" type="VARCHAR(50)"/><column name="couleur" type="VARCHAR(50)"/>
+            <column name="carburant_type" type="VARCHAR(50)"/> <!-- Essence, Diesel, Electrique -->
+            <column name="places" type="INTEGER"/><column name="bagage_capacity" type="INTEGER"/>
+            <column name="puissance" type="DOUBLE PRECISION"/>
+            
+            <!-- Équipements -->
+            <column name="has_air_conditioner" type="BOOLEAN" defaultValue="true"/>
+            <column name="child_seat_count" type="INTEGER" defaultValue="0"/>
+            <column name="has_wifi" type="BOOLEAN" defaultValue="false"/>
+            <column name="has_tv" type="BOOLEAN" defaultValue="false"/>
+            <column name="gps_type" type="VARCHAR(50)"/>
+            <column name="has_bluetooth" type="BOOLEAN" defaultValue="true"/>
+            <column name="has_seat_belt" type="BOOLEAN" defaultValue="true"/>
+            
+            <column name="statut" type="VARCHAR(50)" defaultValue="AVAILABLE"/>
+            <column name="image_url" type="VARCHAR(255)"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="NOW()"/>
+        </createTable>
+    </changeSet>
+     
+     <changeSet id="15-vehicle-categories" author="hassana">
+        <createTable tableName="vehicle_categories">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="organization_id" type="UUID">
+                <!-- MODIFIÉ : nullable="true" pour permettre les catégories système -->
+                <constraints nullable="true" foreignKeyName="fk_cat_org" referencedTableName="organizations" referencedColumnNames="id"/>
+            </column>
+            <column name="name" type="VARCHAR(100)">
+                <!-- AJOUTÉ : unique="true" pour que ON CONFLICT fonctionne dans le seeder -->
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="description" type="TEXT"/>
+        </createTable>
+    </changeSet>
+    
+    <changeSet id="16-seed-default-categories-sql" author="hassana">
+        <sqlFile path="seeds/03-categories.sql" relativeToChangelogFile="true" splitStatements="true" stripComments="true"/>
+    </changeSet>
 </databaseChangeLog>

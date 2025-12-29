@@ -27,7 +27,7 @@ public class AgencyController {
     
     @Operation(summary = "Lister les agences d'une organisation")
     @GetMapping("/org/{orgId}")
-    @PreAuthorize("hasRole('ORGANIZATION') or hasRole('ADMIN')")
+    // @PreAuthorize("hasRole('ORGANIZATION') or hasRole('ADMIN')")
     public Flux<AgencyResponseDTO> getByOrg(@PathVariable UUID orgId) {
         return agencyService.getAgenciesByOrg(orgId);
     }

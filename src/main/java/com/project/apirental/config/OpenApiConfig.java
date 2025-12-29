@@ -45,13 +45,14 @@ public class OpenApiConfig {
         return GroupedOpenApi.builder()
                 .group("3-organization")
                 .pathsToMatch(
-                    "/api/org/**", 
+                    "/api/org/**",
                     "/api/subscriptions/**",
-                    "/api/agencies/**", 
-                    "/api/permissions/**", 
-                    "/api/postes/**", 
+                    "/api/agencies/**",
+                    "/api/permissions/**",
+                    "/api/postes/**",
                     "/api/staff/**",
-                    "/api/vehicles/**")
+                    "/api/vehicles/**",
+                    "/api/drivers/**")
                 .build();
     }
 

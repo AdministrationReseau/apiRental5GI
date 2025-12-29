@@ -2,6 +2,7 @@ package com.project.apirental.modules.organization.api;
 
 import com.project.apirental.modules.organization.dto.OrgResponseDTO;
 import com.project.apirental.modules.organization.dto.OrgUpdateDTO;
+import com.project.apirental.modules.organization.dto.OrgUserResponseDTO;
 import com.project.apirental.modules.organization.mapper.OrgMapper;
 import com.project.apirental.modules.organization.repository.OrganizationRepository;
 import com.project.apirental.modules.organization.services.OrganizationService;
@@ -54,6 +55,14 @@ public class OrganizationController {
 //     @PreAuthorize("hasRole('ORGANIZATION') or hasRole('ADMIN')")
     public Mono<ResponseEntity<OrgResponseDTO>> getOrganization(@PathVariable UUID id) {
         return organizationService.getOrganization(id)
+                .map(ResponseEntity::ok);
+    }
+
+    @Operation(summary = "Récupérer l'utilisateur connecté et son organisation")
+    @GetMapping("/auth/me")
+    @PreAuthorize("hasRole('ORGANIZATION')")
+    public Mono<ResponseEntity<OrgUserResponseDTO>> getMyOrgAndUser() {
+        return organizationService.getCurrentOrgAndUser()
                 .map(ResponseEntity::ok);
     }
 
@@ -115,7 +124,7 @@ public class OrganizationController {
         public Mono<ResponseEntity<SubscriptionResponseDTO>> toggleAutoRenew(
                 @PathVariable UUID id,
                 @RequestBody AutoRenewRequest request) {
-        
+
         return subscriptionService.toggleAutoRenew(id, request.enabled())
                 .flatMap(org -> planRepository.findById(Objects.requireNonNull(org.getSubscriptionPlanId()))
                         .map(plan -> subscriptionMapper.toResponseDTO(org, plan)))

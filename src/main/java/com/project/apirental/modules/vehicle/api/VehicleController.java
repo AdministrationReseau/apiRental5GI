@@ -1,0 +1,73 @@
+package com.project.apirental.modules.vehicle.api;
+
+import com.project.apirental.modules.vehicle.dto.VehicleRequestDTO;
+import com.project.apirental.modules.vehicle.dto.VehicleResponseDTO;
+import com.project.apirental.modules.vehicle.services.VehicleService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/api/vehicles")
+@RequiredArgsConstructor
+@Tag(name = "Vehicle Management")
+@SecurityRequirement(name = "bearerAuth")
+public class VehicleController {
+
+    private final VehicleService vehicleService;
+
+    @Operation(summary = "Ajouter un véhicule à la flotte (Vérifie les quotas)")
+    @PostMapping("/org/{orgId}")
+    @PreAuthorize("hasRole('ORGANIZATION')")
+    public Mono<ResponseEntity<VehicleResponseDTO>> create(@PathVariable UUID orgId, @RequestBody VehicleRequestDTO request) {
+        return vehicleService.createVehicle(orgId, request).map(ResponseEntity::ok);
+    }
+
+    @Operation(summary = "Lister tous les véhicules d'une organisation")
+    @GetMapping("/org/{orgId}")
+    // @PreAuthorize("hasRole('ORGANIZATION') or hasRole('ADMIN')")
+    public Flux<VehicleResponseDTO> getAllByOrg(@PathVariable UUID orgId) {
+        return vehicleService.getVehiclesByOrg(orgId);
+    }
+
+    @Operation(summary = "Lister les véhicules d'une agence")
+    @GetMapping("/agency/{agencyId}")
+    public Flux<VehicleResponseDTO> getAllByAgency(@PathVariable UUID agencyId) {
+        return vehicleService.getVehiclesByAgency(agencyId);
+    }
+
+    @Operation(summary = "Obtenir les détails d'un véhicule par son ID")
+    @GetMapping("/{id}")
+    public Mono<ResponseEntity<VehicleResponseDTO>> getById(@PathVariable UUID id) {
+        return vehicleService.getVehicleById(id).map(ResponseEntity::ok);
+    }
+
+    @Operation(summary = "Mettre à jour les informations d'un véhicule")
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ORGANIZATION') or hasRole('AGENT')")
+    public Mono<ResponseEntity<VehicleResponseDTO>> update(@PathVariable UUID id, @RequestBody VehicleRequestDTO request) {
+        return vehicleService.updateVehicle(id, request).map(ResponseEntity::ok);
+    }
+
+    @Operation(summary = "Changer le statut du véhicule (MAINTENANCE, AVAILABLE, RENTED)")
+    @PatchMapping("/{id}/status")
+    @PreAuthorize("hasRole('ORGANIZATION') or hasRole('AGENT')")
+    public Mono<ResponseEntity<VehicleResponseDTO>> updateStatus(@PathVariable UUID id, @RequestParam String status) {
+        return vehicleService.updateVehicleStatus(id, status).map(ResponseEntity::ok);
+    }
+
+    @Operation(summary = "Supprimer un véhicule (Met à jour les compteurs)")
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ORGANIZATION')")
+    public Mono<ResponseEntity<Void>> delete(@PathVariable UUID id) {
+        return vehicleService.deleteVehicle(id).then(Mono.just(ResponseEntity.noContent().build()));
+    }
+}

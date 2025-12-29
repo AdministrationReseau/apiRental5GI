@@ -12,12 +12,20 @@ public class AgencyMapper {
             entity.getId(),
             entity.getOrganizationId(),
             entity.getName(),
+            entity.getDescription(),
             entity.getAddress(),
             entity.getCity(),
-            entity.getEmail(),
+            entity.getCountry(),            
             entity.getPhone(),
-            entity.getActiveVehicles(),
-            entity.getTotalVehicles(),
+            entity.getEmail(),
+            entity.getManagerId(),
+            entity.getLatitude(),
+            entity.getLongitude(),
+            entity.getIs24Hours(),
+            entity.getTimezone(),
+            entity.getWorkingHours(),
+            entity.getAllowOnlineBooking(),
+            entity.getDepositPercentage(),
             entity.getLogoUrl()
         );
     }

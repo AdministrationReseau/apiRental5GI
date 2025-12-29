@@ -5,6 +5,7 @@ import com.project.apirental.modules.organization.dto.OrgUpdateDTO;
 import com.project.apirental.modules.organization.mapper.OrgMapper;
 import com.project.apirental.modules.organization.repository.OrganizationRepository;
 import com.project.apirental.modules.organization.services.OrganizationService;
+import com.project.apirental.modules.subscription.dto.AutoRenewRequest;
 import com.project.apirental.modules.subscription.dto.PlanUpgradeRequest;
 import com.project.apirental.modules.subscription.dto.SubscriptionRemainingTimeDTO;
 import com.project.apirental.modules.subscription.dto.SubscriptionResponseDTO;
@@ -43,14 +44,14 @@ public class OrganizationController {
 
     @Operation(summary = "Lister toutes les organisations (Admin)")
     @GetMapping("/all")
-    @PreAuthorize("hasRole('ADMIN')")
+//     @PreAuthorize("hasRole('ADMIN')")
     public Flux<OrgResponseDTO> getAll() {
         return organizationService.getAllOrganizations();
     }
 
     @Operation(summary = "Obtenir les détails d'une organisation")
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ORGANIZATION') or hasRole('ADMIN')")
+//     @PreAuthorize("hasRole('ORGANIZATION') or hasRole('ADMIN')")
     public Mono<ResponseEntity<OrgResponseDTO>> getOrganization(@PathVariable UUID id) {
         return organizationService.getOrganization(id)
                 .map(ResponseEntity::ok);
@@ -107,6 +108,19 @@ public class OrganizationController {
         return organizationRepository.findAllBySubscriptionPlanId(planId)
                 .map(orgMapper::toDto);
     }
+
+        @Operation(summary = "Activer/Désactiver le renouvellement automatique de l'abonnement")
+        @PutMapping("/{id}/subscription/auto-renew")
+        @PreAuthorize("hasRole('ORGANIZATION')")
+        public Mono<ResponseEntity<SubscriptionResponseDTO>> toggleAutoRenew(
+                @PathVariable UUID id,
+                @RequestBody AutoRenewRequest request) {
+        
+        return subscriptionService.toggleAutoRenew(id, request.enabled())
+                .flatMap(org -> planRepository.findById(Objects.requireNonNull(org.getSubscriptionPlanId()))
+                        .map(plan -> subscriptionMapper.toResponseDTO(org, plan)))
+                .map(ResponseEntity::ok);
+        }
 
     @Operation(summary = "Statut de l'abonnement de cette organisation")
     @GetMapping("/{id}/subscription")

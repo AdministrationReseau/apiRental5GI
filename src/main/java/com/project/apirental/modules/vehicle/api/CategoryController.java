@@ -27,7 +27,8 @@ public class CategoryController {
 
     @Operation(summary = "Créer une catégorie de véhicule")
     @PostMapping("/org/{orgId}")
-    @PreAuthorize("hasRole('ORGANIZATION')")
+    // @PreAuthorize("hasRole('ORGANIZATION') or @rbac.hasPermission(#orgId, 'vehiclecategory:create')")
+    @PreAuthorize("hasRole('ORGANIZATION') or ")
     public Mono<ResponseEntity<VehicleCategoryEntity>> create(
             @PathVariable UUID orgId,
             @RequestBody CategoryRequestDTO request) { // Utilisation du DTO ici
@@ -53,7 +54,8 @@ public class CategoryController {
 
     @Operation(summary = "Lister toutes les catégories utilisables par une agence (Org + Système)")
     @GetMapping("/agency/{agencyId}")
-    @PreAuthorize("hasAnyRole('ORGANIZATION', 'ADMIN', 'AGENT')")
+    // @PreAuthorize("hasRole('ORGANIZATION') or ADMIN or @rbac.hasPermission(#orgId, 'vehiclecategory:list')")
+    @PreAuthorize("hasRole('ORGANIZATION') or ADMIN")
     public Flux<VehicleCategoryEntity> getByAgency(@PathVariable UUID agencyId) {
         return categoryRepository.findAllByAgencyIdOrSystem(agencyId);
     }
@@ -68,7 +70,8 @@ public class CategoryController {
 
     @Operation(summary = "Supprimer une catégorie (Uniquement si elle appartient à l'organisation)")
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ORGANIZATION')")
+    // @PreAuthorize("hasRole('ORGANIZATION') or @rbac.hasPermission(#orgId, 'vehiclecategory:delete')")
+    @PreAuthorize("hasRole('ORGANIZATION') ")
     public Mono<ResponseEntity<Void>> delete(@PathVariable UUID id) {
         return categoryRepository.findById(Objects.requireNonNull(id))
                 .flatMap(cat -> {

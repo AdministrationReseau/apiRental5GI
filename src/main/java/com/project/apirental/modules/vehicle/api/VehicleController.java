@@ -6,6 +6,7 @@ import com.project.apirental.modules.vehicle.services.VehicleService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -25,6 +26,7 @@ public class VehicleController {
     private final VehicleService vehicleService;
 
     @Operation(summary = "Ajouter un véhicule à la flotte (Vérifie les quotas)")
+    @NotNull
     @PostMapping("/org/{orgId}")
     @PreAuthorize("hasRole('ORGANIZATION') or @rbac.hasPermission(#orgId, 'vehicle:create')")
     public Mono<ResponseEntity<VehicleResponseDTO>> create(@PathVariable UUID orgId, @RequestBody VehicleRequestDTO request) {
@@ -69,5 +71,23 @@ public class VehicleController {
     @PreAuthorize("hasRole('ORGANIZATION') or @rbac.hasPermission(#orgId, 'vehicle:delete')")
      public Mono<ResponseEntity<Void>> delete(@PathVariable UUID id) {
         return vehicleService.deleteVehicle(id).then(Mono.just(ResponseEntity.noContent().build()));
+    }
+
+    @Operation(summary = "Lister les véhicules d'une organisation filtrés par catégorie")
+    @GetMapping("/org/{orgId}/category/{categoryId}")
+    @PreAuthorize("@rbac.hasPermission(#orgId, 'vehicle:list')")
+    public Flux<VehicleResponseDTO> getByOrgAndCategory(
+            @PathVariable UUID orgId, 
+            @PathVariable UUID categoryId) {
+        return vehicleService.getVehiclesByOrgAndCategory(orgId, categoryId);
+    }
+
+    @Operation(summary = "Lister les véhicules d'une agence filtrés par catégorie")
+    @GetMapping("/agency/{agencyId}/category/{categoryId}")
+    @PreAuthorize("@rbac.canAccessAgency(#agencyId, 'vehicle:list')")
+    public Flux<VehicleResponseDTO> getByAgencyAndCategory(
+            @PathVariable UUID agencyId, 
+            @PathVariable UUID categoryId) {
+        return vehicleService.getVehiclesByAgencyAndCategory(agencyId, categoryId);
     }
 }

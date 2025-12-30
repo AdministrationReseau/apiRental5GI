@@ -458,4 +458,77 @@
             <column name="hired_at" type="TIMESTAMP"/>
         </addColumn>
     </changeSet>
+    <changeSet id="18-fix-agencies-columns" author="hassana">
+        <addColumn tableName="agencies">
+            <column name="alias_address" type="TEXT"/>
+        </addColumn>
+    </changeSet>
+    <changeSet id="19-expand-vehicles-v2" author="brayanne">
+        <addColumn tableName="vehicles">
+            <!-- Infos de base supplémentaires -->
+            <column name="vin_number" type="VARCHAR(50)"/> <!-- Numéro de châssis -->
+            <column name="year_production" type="TIMESTAMP"/> <!-- Année de production -->
+            
+            <!-- Blocs JSONB pour les objets imbriqués (spécifications techniques) -->
+            <column name="functionalities" type="jsonb"/> 
+            <column name="engine_details" type="jsonb"/>
+            <column name="fuel_efficiency" type="jsonb"/>
+            <column name="insurance_details" type="jsonb"/>
+            
+            <!-- Tableaux -->
+            <column name="description_list" type="jsonb"/> <!-- Pour stocker string[] -->
+            <column name="images_list" type="jsonb"/>      <!-- Pour stocker string[] -->
+        </addColumn>
+    </changeSet>
+    
+    <changeSet id="20-drop-vehicles-old" author="hassana">
+        <preConditions onFail="CONTINUE">
+            <tableExists tableName="vehicles"/>
+        </preConditions>
+        <dropTable tableName="vehicles"/>
+    </changeSet>
+
+    <!-- 2. Création de la nouvelle table avec la structure complète -->
+    <changeSet id="21-recreate-vehicles-v2" author="hassana">
+        <createTable tableName="vehicles">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="organization_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_veh_org" referencedTableName="organizations" referencedColumnNames="id"/>
+            </column>
+            <column name="agency_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_veh_agency" referencedTableName="agencies" referencedColumnNames="id"/>
+            </column>
+            <column name="category_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_veh_cat" referencedTableName="vehicle_categories" referencedColumnNames="id"/>
+            </column>
+
+            <!-- Champs simples -->
+            <column name="licence_plate" type="VARCHAR(50)">
+                <constraints unique="true" nullable="false"/>
+            </column>
+            <column name="vin_number" type="VARCHAR(100)">
+                <constraints unique="true"/>
+            </column>
+            <column name="brand" type="VARCHAR(100)"/>
+            <column name="model" type="VARCHAR(100)"/>
+            <column name="year_production" type="TIMESTAMP"/>
+            <column name="places" type="INTEGER"/>
+            <column name="kilometrage" type="DOUBLE PRECISION" defaultValueNumeric="0"/>
+            <column name="color" type="VARCHAR(50)"/>
+            <column name="statut" type="VARCHAR(50)" defaultValue="AVAILABLE"/>
+            <column name="transmission" type="VARCHAR(50)"/>
+            
+            <!-- Champs JSONB (Objets Complexes) -->
+            <column name="functionalities" type="jsonb"/>
+            <column name="engine_details" type="jsonb"/>
+            <column name="fuel_efficiency" type="jsonb"/>
+            <column name="insurance_details" type="jsonb"/>
+            <column name="description_list" type="jsonb"/>
+            <column name="images_list" type="jsonb"/>
+
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="NOW()"/>
+        </createTable>
+    </changeSet>
 </databaseChangeLog>

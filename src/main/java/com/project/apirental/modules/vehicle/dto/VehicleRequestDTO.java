@@ -1,26 +1,33 @@
 package com.project.apirental.modules.vehicle.dto;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 public record VehicleRequestDTO(
     UUID agencyId,
     UUID categoryId,
-    String immatriculation,
-    String marque,
-    String modele,
-    Double kilometrage,
-    String transmission,
-    String couleur,
-    String carburantType,
+   String licencePlate,
+    String vinNumber,
+    String brand,
+    String model,
+    LocalDateTime yearProduction,
     Integer places,
-    Integer bagageCapacity,
-    Double puissance,
-    Boolean hasAirConditioner,
-    Boolean hasWifi,
-    Boolean hasTv,
-    String gpsType,
-    String imageUrl,
-    String statut
-) {
-
-  }
+    Double kilometrage,
+    String statut,
+    String color,
+    String transmission,
+    
+    // Équipements
+    FonctionnalitiesDTO functionalities,
+    
+    // Technique
+    EngineDTO engineDetails,
+    FuelEfficiencyDTO fuelEfficiency,
+    
+    
+    // Assurance
+    InsuranceDTO insuranceDetails,
+    
+    String[] description,
+    String[] images
+) {}

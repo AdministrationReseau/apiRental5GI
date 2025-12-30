@@ -43,15 +43,33 @@ public class AgencyService {
                     }
 
                     // 2. PREPARATION DE L'AGENCE
-                    AgencyEntity agency = AgencyEntity.builder()
-                            .id(UUID.randomUUID())
-                            .organizationId(orgId)
-                            .name(request.name())
-                            .address(request.address())
-                            .city(request.city())
-                            .country(request.country() != null ? request.country() : "CM")
-                            .isNewRecord(true)
-                            .build();
+                   AgencyEntity agency = AgencyEntity.builder()
+                        .id(UUID.randomUUID())
+                        .organizationId(orgId)
+                        .name(request.name())
+                        .description(request.description()) // Ajouté
+                        .address(request.address())
+                        .city(request.city())
+                        .country(request.country() != null ? request.country() : "CM")
+                        .postalCode(request.postalCode()) // Ajouté
+                        .region(request.region()) // Ajouté
+                        .phone(request.phone())
+                        .email(request.email())
+                        .managerId(request.managerId())
+                        .latitude(request.latitude())
+                        .longitude(request.longitude())
+                        .geofenceRadius(request.geofenceRadius() != null ? request.geofenceRadius() : 500.0)
+                        .is24Hours(request.is24Hours() != null ? request.is24Hours() : false)
+                        .timezone(request.timezone() != null ? request.timezone() : "Africa/Douala")
+                        .workingHours(request.workingHours())
+                        .allowOnlineBooking(request.allowOnlineBooking() != null ? request.allowOnlineBooking() : true)
+                        .depositPercentage(request.depositPercentage())
+                        .logoUrl(request.logoUrl())
+                        .primaryColor(request.primaryColor())
+                        .secondaryColor(request.secondaryColor())
+                        .isNewRecord(true)
+                        .build();
+
 
                     // 3. SAUVEGARDE + MISE A JOUR COMPTEUR ORG
                     return agencyRepository.save(Objects.requireNonNull(agency))
@@ -97,12 +115,28 @@ public class AgencyService {
     @Transactional
     public Mono<AgencyResponseDTO> updateAgency(UUID id, AgencyRequestDTO request) {
         return agencyRepository.findById(Objects.requireNonNull(id))
+            .switchIfEmpty(Mono.error(new RuntimeException("Agence non trouvée avec l'ID : " + id)))
                 .flatMap(existing -> {
                     if(request.name() != null) existing.setName(request.name());
                     if(request.address() != null) existing.setAddress(request.address());
                     if(request.city() != null) existing.setCity(request.city());
                     if(request.phone() != null) existing.setPhone(request.phone());
-                    // ... mettre à jour les autres champs nécessaires
+                    if(request.email() != null) existing.setEmail(request.email());
+                    if(request.description() != null) existing.setDescription(request.description());
+                    if(request.postalCode() != null) existing.setPostalCode(request.postalCode());
+                    if(request.region() != null) existing.setRegion(request.region());
+                    if(request.managerId() != null) existing.setManagerId(request.managerId());
+                    if(request.latitude() != null) existing.setLatitude(request.latitude());
+                    if(request.longitude() != null) existing.setLongitude(request.longitude());
+                    if(request.geofenceRadius() != null) existing.setGeofenceRadius(request.geofenceRadius());
+                    if(request.is24Hours() != null) existing.setIs24Hours(request.is24Hours());
+                    if(request.timezone() != null) existing.setTimezone(request.timezone());    
+                    if(request.workingHours() != null) existing.setWorkingHours(request.workingHours());
+                    if(request.allowOnlineBooking() != null) existing.setAllowOnlineBooking(request.allowOnlineBooking());
+                    if(request.depositPercentage() != null) existing.setDepositPercentage(request.depositPercentage()); 
+                    if(request.logoUrl() != null) existing.setLogoUrl(request.logoUrl());
+                    if(request.primaryColor() != null) existing.setPrimaryColor(request.primaryColor());
+                    if(request.secondaryColor() != null) existing.setSecondaryColor(request.secondaryColor());
                     return agencyRepository.save(Objects.requireNonNull(existing));
                 })
                 .doOnSuccess(updated -> eventPublisher.publishEvent(
@@ -117,4 +151,5 @@ public class AgencyService {
                         new AuditEvent("DELETE_AGENCY", "AGENCY", "Deleted agency ID: " + id)
                 ));
     }
+    
 }

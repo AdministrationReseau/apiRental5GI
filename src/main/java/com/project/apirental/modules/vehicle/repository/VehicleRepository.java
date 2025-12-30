@@ -14,4 +14,7 @@ public interface VehicleRepository extends R2dbcRepository<VehicleEntity, UUID> 
     Flux<VehicleEntity> findAllByOrganizationId(UUID organizationId);
     @Query("SELECT organization_id FROM vehicles WHERE id = :vehicleId")
     Mono<UUID> findOrgIdByVehicleId(UUID vehicleId);
+    Flux<VehicleEntity> findAllByOrganizationIdAndCategoryId(UUID organizationId, UUID categoryId);
+    Flux<VehicleEntity> findAllByAgencyIdAndCategoryId(UUID agencyId, UUID categoryId);
+
 }

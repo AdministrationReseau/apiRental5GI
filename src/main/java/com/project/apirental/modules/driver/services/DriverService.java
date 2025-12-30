@@ -75,7 +75,7 @@ public class DriverService {
                                 .build();
 
                         // 4. Sauvegarde et mise à jour des compteurs
-                        return driverRepository.save(driver)
+                        return driverRepository.save(Objects.requireNonNull(driver))
                                 .flatMap(saved ->
                                     organizationService.updateDriverCounter(orgId, 1)
                                     .then(updateAgencyDriverStats(agencyId, 1))
@@ -129,7 +129,7 @@ public class DriverService {
     @Transactional
     public Mono<Void> deleteDriver(UUID id) {
         return driverRepository.findById(Objects.requireNonNull(id))
-                .flatMap(driver -> driverRepository.delete(driver)
+                .flatMap(driver -> driverRepository.delete(Objects.requireNonNull(driver))
                         .then(organizationService.updateDriverCounter(driver.getOrganizationId(), -1))
                         .then(updateAgencyDriverStats(driver.getAgencyId(), -1)));
     }

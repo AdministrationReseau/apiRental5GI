@@ -24,6 +24,7 @@ public class AgencyEntity implements Persistable<UUID> {
     
     // Address & Location
     private String address;
+    private String aliasAddress;
     private String city;
     @Builder.Default
     private String country = "CM";

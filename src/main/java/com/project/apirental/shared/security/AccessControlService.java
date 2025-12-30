@@ -11,6 +11,7 @@ import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
+import java.util.Objects;
 import java.util.UUID;
 
 @Service("rbac")
@@ -34,7 +35,7 @@ public class AccessControlService {
                     if ("ADMIN".equals(user.getRole()))
                         return Mono.just(true);
                     if ("ORGANIZATION".equals(user.getRole())) {
-                        return organizationRepository.findById(orgId)
+                        return organizationRepository.findById(Objects.requireNonNull(orgId))
                                 .map(org -> org.getOwnerId().equals(user.getId()))
                                 .defaultIfEmpty(false);
                     }

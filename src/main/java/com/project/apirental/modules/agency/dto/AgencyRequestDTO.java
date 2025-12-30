@@ -8,15 +8,20 @@ public record AgencyRequestDTO(
     String address,
     String city,
     String country,
+    String postalCode,
+    String region,
     String phone,
     String email,
     UUID managerId,
     Double latitude,
     Double longitude,
+    Double geofenceRadius,
     Boolean is24Hours,
     String timezone,
     String workingHours,
     Boolean allowOnlineBooking,
     Double depositPercentage,
-    String logoUrl
+    String logoUrl,
+    String primaryColor,
+    String secondaryColor
 ) {}

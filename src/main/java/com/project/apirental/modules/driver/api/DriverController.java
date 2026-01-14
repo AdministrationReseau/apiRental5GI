@@ -2,6 +2,8 @@ package com.project.apirental.modules.driver.api;
 
 import com.project.apirental.modules.driver.dto.DriverResponseDTO;
 import com.project.apirental.modules.driver.services.DriverService;
+import com.project.apirental.modules.driver.dto.DriverDetailResponseDTO;
+import com.project.apirental.modules.driver.dto.UpdateDriverStatusDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -77,6 +79,21 @@ public class DriverController {
     @GetMapping("/{id}")
     public Mono<ResponseEntity<DriverResponseDTO>> getById(@PathVariable UUID id) {
         return driverService.getDriverById(id).map(ResponseEntity::ok);
+    }
+
+    @Operation(summary = "Obtenir les détails complets (Planning + Prix) d'un conducteur")
+    @GetMapping("/{id}/details")
+    public Mono<ResponseEntity<DriverDetailResponseDTO>> getDriverDetails(@PathVariable UUID id) {
+        return driverService.getDriverDetails(id).map(ResponseEntity::ok);
+    }
+
+    @Operation(summary = "Mettre à jour statut, motif, planning et prix")
+    @PatchMapping("/{id}/status-pricing")
+    @PreAuthorize("hasRole('ORGANIZATION')")
+    public Mono<ResponseEntity<DriverDetailResponseDTO>> updateStatusAndPricing(
+            @PathVariable UUID id,
+            @RequestBody UpdateDriverStatusDTO request) {
+        return driverService.updateDriverStatusAndPricing(id, request).map(ResponseEntity::ok);
     }
 
     @Operation(summary = "Changer l'agence d'un conducteur")

@@ -1,3 +1,0 @@
-#### notre architecture est une architecture modulaire tous les differents module sont implementés mais chacun dans son dossier permttant ainsi de les exporter facilement dans d'autres projets afin de transformer ce projet en microservice pour une evolution de celui-ci 
-
-##### Dans le module auth j'ai mis toute la structure generale d'un module mais pour les module tous les dossiers ne sont pas forcement necessaire comme exemple les module comme la gestion des logs qui necessite les listener pour ecouter chaque evenement du syteme ou meme celui de notifications qui ne necessite pas forcement tous les dossier 

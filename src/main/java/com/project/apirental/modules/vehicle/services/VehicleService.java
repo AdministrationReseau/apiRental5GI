@@ -11,6 +11,12 @@ import com.project.apirental.modules.vehicle.dto.VehicleResponseDTO;
 import com.project.apirental.modules.vehicle.mapper.VehicleMapper;
 import com.project.apirental.modules.vehicle.repository.CategoryRepository;
 import com.project.apirental.modules.vehicle.repository.VehicleRepository;
+import com.project.apirental.modules.vehicle.dto.VehicleDetailResponseDTO;
+import com.project.apirental.modules.vehicle.dto.UpdateVehicleStatusDTO;
+import com.project.apirental.modules.pricing.domain.PricingEntity;
+import com.project.apirental.modules.pricing.services.PricingService;
+import com.project.apirental.modules.schedule.services.ScheduleService;
+import com.project.apirental.shared.enums.ResourceType;
 import com.project.apirental.shared.events.AuditEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -36,6 +42,8 @@ public class VehicleService {
     private final VehicleMapper vehicleMapper;
     private final AgencyRepository agencyRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final ScheduleService scheduleService;
+    private final PricingService pricingService;
 
     @Transactional
     public Mono<VehicleResponseDTO> createVehicle(UUID orgId, VehicleRequestDTO request) {
@@ -101,7 +109,62 @@ public class VehicleService {
                     return agencyRepository.save(agency);
                 }).then();
     }
-    // Dans VehicleService.java
+
+    public Mono<VehicleDetailResponseDTO> getVehicleDetails(UUID id) {
+        return vehicleRepository.findById(Objects.requireNonNull(id))
+            .flatMap(vehicle -> {
+                // Pour le prix, on cherche d'abord le prix du véhicule, sinon celui de la catégorie
+                Mono<PricingEntity> pricingMono = pricingService.getPricing(ResourceType.VEHICLE, id);
+
+                var scheduleFlux = scheduleService.getResourceSchedule(ResourceType.VEHICLE, id).collectList();
+
+                // On doit enrichir le DTO Vehicle de base (avec catégorie)
+                Mono<VehicleResponseDTO> vehicleDtoMono = enrichVehicle(vehicle);
+
+                return Mono.zip(vehicleDtoMono, pricingMono.defaultIfEmpty(new PricingEntity()), scheduleFlux)
+                    .map(tuple -> new VehicleDetailResponseDTO(tuple.getT1(), tuple.getT2().getId() == null ? null : tuple.getT2(), tuple.getT3()));
+            });
+    }
+
+    @Transactional
+    public Mono<VehicleDetailResponseDTO> updateVehicleStatusAndPricing(UUID id, UpdateVehicleStatusDTO request) {
+        return vehicleRepository.findById(Objects.requireNonNull(id))
+            .flatMap(vehicle -> {
+                // 1. Statut global
+                if (request.globalStatus() != null) {
+                    vehicle.setStatut(request.globalStatus());
+                }
+
+                // 2. Prix (Spécifique au véhicule)
+                Mono<Void> pricingMono = Mono.empty();
+                if (request.pricePerHour() != null || request.pricePerDay() != null) {
+                    pricingMono = pricingService.setPricing(
+                        vehicle.getOrganizationId(),
+                        ResourceType.VEHICLE,
+                        vehicle.getId(),
+                        request.pricePerHour(),
+                        request.pricePerDay()
+                    ).then();
+                }
+
+                // 3. Planning (Maintenance, etc.)
+                Mono<Void> scheduleMono = Mono.empty();
+                if (request.schedule() != null) {
+                    scheduleMono = scheduleService.addUnavailability(
+                        vehicle.getOrganizationId(),
+                        ResourceType.VEHICLE,
+                        vehicle.getId(),
+                        request.schedule()
+                    ).then();
+                }
+
+                return vehicleRepository.save(vehicle)
+                    .then(pricingMono)
+                    .then(scheduleMono)
+                    .thenReturn(vehicle);
+            })
+            .flatMap(vehicle -> getVehicleDetails(vehicle.getId()));
+    }
 
     public Flux<VehicleResponseDTO> getVehiclesByOrg(UUID orgId) {
         return vehicleRepository.findAllByOrganizationId(orgId)

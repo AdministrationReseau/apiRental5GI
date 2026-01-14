@@ -12,6 +12,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.NonNull;
 
 @Data
 @Builder
@@ -20,6 +21,7 @@ import lombok.NoArgsConstructor;
 @Table("users")
 public class UserEntity implements Persistable<UUID> {
     @Id
+    @NonNull
     private UUID id;
     private String firstname;
     private String lastname;
@@ -27,7 +29,7 @@ public class UserEntity implements Persistable<UUID> {
     private String email;
     private String password;
     private String role;
-    
+
     // Nouveaux champs Staff
     private UUID organizationId;
     private UUID agencyId;

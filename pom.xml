@@ -11,7 +11,7 @@
 	<groupId>com.project</groupId>
 	<artifactId>apirental</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>apirental</name> 
+	<name>apirental</name>
 	<description>api spring boot du projet rental</description>
 	<url/>
 	<licenses>
@@ -68,6 +68,11 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-security</artifactId>
 		</dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
 
         <!-- MISE A JOUR ICI : Version 2.7.0 pour compatibilité Spring Boot 3.4+ -->
 		<dependency>

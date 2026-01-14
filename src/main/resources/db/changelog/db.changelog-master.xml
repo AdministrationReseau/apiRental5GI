@@ -555,6 +555,7 @@
     <!-- 2. Création de la nouvelle table avec la structure complète -->
     <changeSet id="21-recreate-vehicles-v2" author="hassana">
         <createTable tableName="vehicles">
+            <column>
                 <constraints nullable="false" foreignKeyName="fk_veh_org" referencedTableName="organizations" referencedColumnNames="id"/>
             </column>
             <column name="agency_id" type="UUID">

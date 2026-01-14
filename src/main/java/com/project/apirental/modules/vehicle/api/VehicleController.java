@@ -3,6 +3,8 @@ package com.project.apirental.modules.vehicle.api;
 import com.project.apirental.modules.vehicle.dto.VehicleRequestDTO;
 import com.project.apirental.modules.vehicle.dto.VehicleResponseDTO;
 import com.project.apirental.modules.vehicle.services.VehicleService;
+import com.project.apirental.modules.vehicle.dto.VehicleDetailResponseDTO;
+import com.project.apirental.modules.vehicle.dto.UpdateVehicleStatusDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -44,6 +46,21 @@ public class VehicleController {
     @GetMapping("/agency/{agencyId}")
     public Flux<VehicleResponseDTO> getAllByAgency(@PathVariable UUID agencyId) {
         return vehicleService.getVehiclesByAgency(agencyId);
+    }
+
+    @Operation(summary = "Obtenir les détails complets (Planning + Prix) d'un véhicule")
+    @GetMapping("/{id}/details")
+    public Mono<ResponseEntity<VehicleDetailResponseDTO>> getVehicleDetails(@PathVariable UUID id) {
+        return vehicleService.getVehicleDetails(id).map(ResponseEntity::ok);
+    }
+
+    @Operation(summary = "Mettre à jour statut (Maintenance/Indispo), planning et prix")
+    @PatchMapping("/{id}/status-pricing")
+    @PreAuthorize("hasRole('ORGANIZATION')")
+    public Mono<ResponseEntity<VehicleDetailResponseDTO>> updateStatusAndPricing(
+            @PathVariable UUID id,
+            @RequestBody UpdateVehicleStatusDTO request) {
+        return vehicleService.updateVehicleStatusAndPricing(id, request).map(ResponseEntity::ok);
     }
 
     @Operation(summary = "Obtenir les détails d'un véhicule par son ID")

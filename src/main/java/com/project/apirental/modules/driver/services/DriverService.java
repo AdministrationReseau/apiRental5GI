@@ -198,7 +198,7 @@ public class DriverService {
     @Transactional
     public Mono<Void> deleteDriver(UUID id) {
         return driverRepository.findById(Objects.requireNonNull(id))
-                .flatMap(driver -> driverRepository.delete(driver)
+                .flatMap(driver -> driverRepository.delete(Objects.requireNonNull(driver))
                         .then(organizationService.updateDriverCounter(driver.getOrganizationId(), -1))
                         .then(updateAgencyDriverStats(driver.getAgencyId(), -1)));
     }

@@ -1,5 +1,7 @@
 package com.project.apirental.modules.vehicle.services;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.r2dbc.postgresql.codec.Json;
 import com.project.apirental.modules.agency.repository.AgencyRepository;
 import com.project.apirental.modules.organization.domain.OrganizationEntity;
 import com.project.apirental.modules.organization.repository.OrganizationRepository;
@@ -42,8 +44,10 @@ public class VehicleService {
     private final VehicleMapper vehicleMapper;
     private final AgencyRepository agencyRepository;
     private final ApplicationEventPublisher eventPublisher;
+  
     private final ScheduleService scheduleService;
     private final PricingService pricingService;
+    private final ObjectMapper objectMapper;
 
     @Transactional
     public Mono<VehicleResponseDTO> createVehicle(UUID orgId, VehicleRequestDTO request) {
@@ -60,45 +64,66 @@ public class VehicleService {
                             }
 
                             // 2. PRÉPARATION DU VÉHICULE
-                            VehicleEntity vehicle = VehicleEntity.builder()
-                                    .id(UUID.randomUUID())
-                                    .organizationId(orgId)
-                                    .agencyId(request.agencyId())
-                                    .categoryId(request.categoryId())
-                                    .immatriculation(request.immatriculation())
-                                    .marque(request.marque())
-                                    .modele(request.modele())
-                                    .kilometrage(request.kilometrage())
-                                    .transmission(request.transmission())
-                                    .couleur(request.couleur())
-                                    .places(request.places())
-                                    .hasAirConditioner(request.hasAirConditioner())
-                                    .hasWifi(request.hasWifi())
-                                    .gpsType(request.gpsType())
-                                    .imageUrl(request.imageUrl())
-                                    .statut("AVAILABLE") // Statut par défaut
-                                    .createdAt(LocalDateTime.now())
-                                    .isNewRecord(true)
-                                    .build();
+                            try {
+                                // Conversion des objets DTO en JSON pour la BDD
+                                Json functionalitiesJson = Json
+                                        .of(objectMapper.writeValueAsString(request.functionalities()));
+                                Json engineJson = Json.of(objectMapper.writeValueAsString(request.engineDetails()));
+                                Json fuelEfficiencyJson = Json.of(objectMapper.writeValueAsString(request.fuelEfficiency()));
+                                Json insuranceJson = Json.of(objectMapper.writeValueAsString(request.insuranceDetails()));
+                                Json descJson = Json.of(objectMapper.writeValueAsString(request.description()));
+                                Json imgsJson = Json.of(objectMapper.writeValueAsString(request.images()));
 
-                            // 3. SAUVEGARDE ET MISE À JOUR DES COMPTEURS
-                            return vehicleRepository.save(Objects.requireNonNull(vehicle))
-                                    .flatMap(savedVehicle -> {
-                                        // Mise à jour du compteur de l'organisation
-                                        org.setCurrentVehicles(org.getCurrentVehicles() + 1);
+                                VehicleEntity vehicle = VehicleEntity.builder()
+                                        .id(UUID.randomUUID())
+                                        .organizationId(orgId)
+                                        .agencyId(request.agencyId())
+                                        .categoryId(request.categoryId())
+                                        .licencePlate(request.licencePlate())
+                                        .vinNumber(request.vinNumber())
+                                        .brand(request.brand())
+                                        .model(request.model())
+                                        .yearProduction(request.yearProduction())
+                                        .places(request.places())
+                                        .kilometrage(request.kilometrage())
+                                        .statut(request.statut())
+                                        .color(request.color())
+                                        .transmission(request.transmission())
+                                        // Injection JSONB
+                                        .functionalities(functionalitiesJson)
+                                        .engineDetails(engineJson)
+                                        .fuelEfficiency(fuelEfficiencyJson)
+                                        .insuranceDetails(insuranceJson)
+                                        .descriptionList(descJson)
+                                        .imagesList(imgsJson)
+                                        .createdAt(LocalDateTime.now())
+                                        .statut("AVAILABLE")
+                                        .isNewRecord(true)
+                                        .build();
 
-                                        return organizationRepository.save(org)
-                                                .then(updateAgencyVehicleStats(request.agencyId(), 1))
-                                                // On retourne le véhicule sauvegardé pour la suite de la chaîne
-                                                .thenReturn(savedVehicle);
-                                    });
+                                // 3. SAUVEGARDE ET MISE À JOUR DES COMPTEURS
+                                return vehicleRepository.save(Objects.requireNonNull(vehicle))
+                                        .flatMap(savedVehicle -> {
+                                            // Mise à jour du compteur de l'organisation
+                                            org.setCurrentVehicles(org.getCurrentVehicles() + 1);
+
+                                            return organizationRepository.save(org)
+                                                    .then(updateAgencyVehicleStats(request.agencyId(), 1))
+                                                    // On retourne le véhicule sauvegardé pour la suite de la chaîne
+                                                    .thenReturn(savedVehicle);
+                                        });
+                            } catch (Exception e) {
+                                return Mono.error(new RuntimeException("Erreur de sérialisation des données véhicule"));
+                            }
+
                         }))
                 // 4. ENRICHISSEMENT ET MAPPING VERS DTO (C'est ici que le lien se fait)
-                .flatMap(savedVehicle -> categoryRepository.findById(Objects.requireNonNull(savedVehicle.getCategoryId()))
+                .flatMap(savedVehicle -> categoryRepository
+                        .findById(Objects.requireNonNull(savedVehicle.getCategoryId()))
                         .map(cat -> vehicleMapper.toDto(savedVehicle, cat))
                         .defaultIfEmpty(vehicleMapper.toDto(savedVehicle, null)))
                 .doOnSuccess(v -> eventPublisher.publishEvent(
-                        new AuditEvent("CREATE_VEHICLE", "VEHICLE", "Véhicule ajouté : " + v.immatriculation())));
+                        new AuditEvent("CREATE_VEHICLE", "VEHICLE", "Véhicule ajouté : " + v.licencePlate())));
     }
 
     private Mono<Void> updateAgencyVehicleStats(UUID agencyId, int increment) {
@@ -184,23 +209,39 @@ public class VehicleService {
     @Transactional
     public Mono<VehicleResponseDTO> updateVehicle(UUID id, VehicleRequestDTO request) {
         return vehicleRepository.findById(Objects.requireNonNull(id))
+            .switchIfEmpty(Mono.error(new RuntimeException("Véhicule non trouvé")))
                 .flatMap(v -> {
-                    v.setKilometrage(request.kilometrage());
-                    v.setCouleur(request.couleur());
-                    v.setImageUrl(request.imageUrl());
-                    v.setStatut(request.statut());
+                    v.setAgencyId(request.agencyId());
                     v.setCategoryId(request.categoryId());
-                    v.setImmatriculation(request.immatriculation());
-                    v.setMarque(request.marque());
-                    v.setModele(request.modele());
-                    v.setKilometrage(request.kilometrage());
-                    v.setTransmission(request.transmission());
-                    v.setCouleur(request.couleur());
+                    v.setLicencePlate(request.licencePlate());
+                    v.setVinNumber(request.vinNumber());
+                    v.setBrand(request.brand());
+                    v.setModel(request.model());
+                    v.setYearProduction(request.yearProduction());
                     v.setPlaces(request.places());
-                    v.setHasAirConditioner(request.hasAirConditioner());
-                    v.setHasWifi(request.hasWifi());
-                    v.setGpsType(request.gpsType());
+                    v.setKilometrage(request.kilometrage());
+                    v.setStatut(request.statut());
+                    v.setColor(request.color());
+                    v.setTransmission(request.transmission());
+                    try {
+                        // Conversion des objets DTO en JSON pour la BDD
+                        Json functionalitiesJson = Json
+                                .of(objectMapper.writeValueAsString(request.functionalities()));
+                        Json engineJson = Json.of(objectMapper.writeValueAsString(request.engineDetails()));
+                        Json fuelEfficiencyJson = Json.of(objectMapper.writeValueAsString(request.fuelEfficiency()));
+                        Json insuranceJson = Json.of(objectMapper.writeValueAsString(request.insuranceDetails()));
+                        Json descJson = Json.of(objectMapper.writeValueAsString(request.description()));
+                        Json imgsJson = Json.of(objectMapper.writeValueAsString(request.images()));
 
+                        v.setFunctionalities(functionalitiesJson);
+                        v.setEngineDetails(engineJson);
+                        v.setFuelEfficiency(fuelEfficiencyJson);
+                        v.setInsuranceDetails(insuranceJson);
+                        v.setDescriptionList(descJson);
+                        v.setImagesList(imgsJson);
+                    } catch (Exception e) {
+                        return Mono.error(new RuntimeException("Erreur de sérialisation des données véhicule"));
+                    }
                     return vehicleRepository.save(v);
                 })
                 .flatMap(this::enrichVehicle);
@@ -228,5 +269,15 @@ public class VehicleService {
         return categoryRepository.findById(Objects.requireNonNull(vehicle.getCategoryId()))
                 .map(cat -> vehicleMapper.toDto(vehicle, cat))
                 .defaultIfEmpty(vehicleMapper.toDto(vehicle, null));
+    }
+
+    public Flux<VehicleResponseDTO> getVehiclesByOrgAndCategory(UUID orgId, UUID categoryId) {
+        return vehicleRepository.findAllByOrganizationIdAndCategoryId(orgId, categoryId)
+                .flatMap(this::enrichVehicle);
+    }
+
+    public Flux<VehicleResponseDTO> getVehiclesByAgencyAndCategory(UUID agencyId, UUID categoryId) {
+        return vehicleRepository.findAllByAgencyIdAndCategoryId(agencyId, categoryId)
+                .flatMap(this::enrichVehicle);
     }
 }

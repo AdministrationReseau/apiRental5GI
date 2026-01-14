@@ -6,6 +6,7 @@ import com.project.apirental.modules.agency.services.AgencyService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -40,7 +41,8 @@ public class AgencyController {
     }
 
     @Operation(summary = "Créer une nouvelle agence pour une organisation")
-     @PostMapping("/org/{orgId}")
+    @PostMapping("/org/{orgId}")
+    @NotNull
     @PreAuthorize("hasRole('ORGANIZATION')")
     public Mono<ResponseEntity<AgencyResponseDTO>> create(@PathVariable UUID orgId, @RequestBody AgencyRequestDTO request) {
         return agencyService.createAgency(orgId, request)

@@ -14,19 +14,25 @@ public class AgencyMapper {
             entity.getName(),
             entity.getDescription(),
             entity.getAddress(),
+            entity.getAliasAddress(), 
             entity.getCity(),
-            entity.getCountry(),            
-            entity.getPhone(),
-            entity.getEmail(),
-            entity.getManagerId(),
+            entity.getCountry(), 
+            entity.getPostalCode(), 
+            entity.getRegion(), 
             entity.getLatitude(),
-            entity.getLongitude(),
+            entity.getLongitude(),  
+            entity.getGeofenceRadius(),  
+            entity.getEmail(),
+            entity.getPhone(),
+            entity.getManagerId(),
             entity.getIs24Hours(),
             entity.getTimezone(),
             entity.getWorkingHours(),
             entity.getAllowOnlineBooking(),
             entity.getDepositPercentage(),
-            entity.getLogoUrl()
+            entity.getLogoUrl(),
+            entity.getPrimaryColor(),
+            entity.getSecondaryColor()
         );
     }
 }

@@ -43,7 +43,7 @@ public class StaffService {
     public Mono<StaffResponseDTO> addStaffToOrganization(UUID orgId, StaffRequestDTO request) {
         return staffRepository.findByEmail(request.email())
                 .flatMap(existing -> Mono.<UserEntity>error(new RuntimeException("Cet email est déjà utilisé")))
-                .switchIfEmpty(Mono.defer(() -> organizationRepository.findById(orgId)
+                .switchIfEmpty(Mono.defer(() -> organizationRepository.findById(Objects.requireNonNull(orgId))
                         .switchIfEmpty(Mono.<OrganizationEntity>error(new RuntimeException("Organisation non trouvée")))
                         .flatMap(org -> planRepository.findById(Objects.requireNonNull(org.getSubscriptionPlanId()))
                                 .flatMap(plan -> {
@@ -74,7 +74,7 @@ public class StaffService {
                                             .isNewRecord(true)
                                             .build();
 
-                                    return staffRepository.save(newUser)
+                                    return staffRepository.save(Objects.requireNonNull(newUser))
                                             .flatMap(savedUser -> organizationService.updateStaffCounter(orgId, 1)
                                                     .then(updateAgencyStaffCounter(request.agencyId(), 1))
                                                     .thenReturn(savedUser));
@@ -93,15 +93,15 @@ public class StaffService {
     }
 
     public Mono<StaffResponseDTO> getStaffById(UUID id) {
-        return staffRepository.findById(id)
+        return staffRepository.findById(Objects.requireNonNull(id))
                 .flatMap(this::enrichStaff)
                 .switchIfEmpty(Mono.error(new RuntimeException("Staff non trouvé")));
     }
 
     @Transactional
     public Mono<Void> deleteStaff(UUID id) {
-        return staffRepository.findById(id)
-                .flatMap(user -> staffRepository.delete(user)
+        return staffRepository.findById(Objects.requireNonNull(id))
+                .flatMap(user -> staffRepository.delete(Objects.requireNonNull(user))
                         .then(organizationService.updateStaffCounter(user.getOrganizationId(), -1))
                         .then(updateAgencyStaffCounter(user.getAgencyId(), -1)))
                 .doOnSuccess(v -> eventPublisher

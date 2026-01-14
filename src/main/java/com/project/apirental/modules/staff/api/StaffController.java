@@ -5,6 +5,7 @@ import com.project.apirental.modules.staff.services.StaffService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -25,6 +26,7 @@ public class StaffController {
 
     @Operation(summary = "Ajouter un membre au staff d'une organisation")
     @PostMapping("/org/{orgId}")
+    @NotNull
     @PreAuthorize("hasRole('ORGANIZATION') or @rbac.hasPermission(#orgId, 'staff:create')")
     // @PreAuthorize("@rbac.hasPermission(#orgId, 'staff:create')")
     public Mono<ResponseEntity<StaffResponseDTO>> create(@PathVariable UUID orgId,

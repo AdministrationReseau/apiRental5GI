@@ -1,5 +1,6 @@
 package com.project.apirental.modules.vehicle.domain;
 
+import io.r2dbc.postgresql.codec.Json;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 import org.springframework.data.annotation.Id;
@@ -17,28 +18,28 @@ public class VehicleEntity implements Persistable<UUID> {
     private UUID agencyId;
     private UUID categoryId;
 
-    private String immatriculation;
-    private String marque;
-    private String modele;
+    private String licencePlate;
+    private String vinNumber;
+    private String brand;
+    private String model;
+    private LocalDateTime yearProduction; 
+    private Integer places;
     private Double kilometrage;
     private String transmission;
-    private String couleur;
-    private String carburantType;
-    private Integer places;
-    private Integer bagageCapacity;
-    private Double puissance;
-
-    private Boolean hasAirConditioner;
-    private Integer childSeatCount;
-    private Boolean hasWifi;
-    private Boolean hasTv;
-    private String gpsType;
-    private Boolean hasBluetooth;
-    private Boolean hasSeatBelt;
-
+    private String color;
     @Builder.Default
     private String statut = "AVAILABLE"; // AVAILABLE, RENTED, MAINTENANCE, UNAVAILABLE
-    private String imageUrl;
+   
+ 
+    // Stockage JSONB
+    private Json functionalities; 
+    private Json engineDetails;
+    private Json fuelEfficiency;
+    private Json insuranceDetails;
+    private Json descriptionList;
+    private Json imagesList;
+
+
     private LocalDateTime createdAt;
 
     @Transient @Builder.Default @JsonIgnore private boolean isNewRecord = false;

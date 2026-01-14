@@ -45,7 +45,7 @@ public class CategoryController {
         return categoryRepository.save(Objects.requireNonNull(category)).map(ResponseEntity::ok);
     }
 
-    @Operation(summary = "Lister les véhicules d'une organisation (Org + Système)")
+    @Operation(summary = "Lister les catégories de véhicules d'une organisation (Org + Système)")
     @GetMapping("/org/{orgId}")
     public Flux<VehicleCategoryEntity> getByOrg(@PathVariable UUID orgId) {
         return categoryRepository.findAllByOrganizationIdOrSystem(orgId);
@@ -81,5 +81,21 @@ public class CategoryController {
                     return categoryRepository.deleteById(Objects.requireNonNull(id));
                 })
                 .then(Mono.just(ResponseEntity.noContent().build()));
+    }
+    @Operation(summary = "Mettre à jour une catégorie de véhicule")
+    @PutMapping("/{id}")
+    @PreAuthorize("@rbac.canAccessCategory(#id, 'vehiclecategory:update')")
+    public Mono<ResponseEntity<VehicleCategoryEntity>> update(
+            @PathVariable UUID id,
+            @RequestBody CategoryRequestDTO request) {
+        
+        return categoryRepository.findById(Objects.requireNonNull(id))
+                .flatMap(existingCat -> {
+                    existingCat.setName(request.name());
+                    existingCat.setDescription(request.description());
+                    return categoryRepository.save(existingCat);
+                })
+                .map(ResponseEntity::ok)
+                .switchIfEmpty(Mono.error(new RuntimeException("Catégorie non trouvée")));
     }
 }

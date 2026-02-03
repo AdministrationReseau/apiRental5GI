@@ -38,7 +38,7 @@
         </createTable>
     </changeSet>
 
-    <!-- ChangeSet 3: Création table audits (Oublié précédemment) -->
+    <!-- ChangeSet 3: Création table audits -->
     <changeSet id="3" author="brayanne">
         <createTable tableName="audits">
             <column name="id" type="UUID">
@@ -65,7 +65,7 @@
             <column name="description" type="TEXT"/>
             <column name="registration_number" type="VARCHAR(100)"/>
             <column name="tax_number" type="VARCHAR(100)"/>
-            <column name="business_license" type="VARCHAR(500)"/> <!-- URL/Path du fichier -->
+            <column name="business_license" type="VARCHAR(500)"/>
             <column name="address" type="VARCHAR(255)"/>
             <column name="city" type="VARCHAR(100)"/>
             <column name="country" type="VARCHAR(50)" defaultValue="CM"/>
@@ -91,7 +91,7 @@
         </addColumn>
     </changeSet>
 
-       <!-- 6. Table Subscriptions (Historique des transactions / Contrats) -->
+    <!-- 6. Table Subscriptions -->
     <changeSet id="6" author="hassana">
         <createTable tableName="subscriptions">
             <column name="id" type="UUID">
@@ -111,7 +111,7 @@
         </createTable>
     </changeSet>
 
-    <!-- 7. Table des Plans de Souscription (Le Catalogue) -->
+    <!-- 7. Table des Plans de Souscription -->
     <changeSet id="7-create-subscription-plans" author="hassana">
         <createTable tableName="subscription_plans">
             <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
@@ -136,7 +136,7 @@
         </createTable>
     </changeSet>
 
-     <!-- 8. Insertion des plans par défaut -->
+    <!-- 8. Insertion des plans par défaut -->
     <changeSet id="8-seed-subscription-plans" author="hassana">
         <insert tableName="subscription_plans">
             <column name="name" value="FREE"/>
@@ -174,12 +174,13 @@
         </insert>
     </changeSet>
 
-    <!-- 9. Ajustement de la table Organizations pour pointer vers l'ID du plan -->
+    <!-- 9. Ajustement de la table Organizations -->
     <changeSet id="9-update-org-subscription-link" author="hassana">
         <addForeignKeyConstraint baseTableName="organizations" baseColumnNames="subscription_plan_id"
                                  constraintName="fk_org_sub_plan" referencedTableName="subscription_plans"
                                  referencedColumnNames="id"/>
     </changeSet>
+
     <changeSet id="7-create-medias-table" author="brayanne">
         <createTable tableName="medias">
             <column name="id" type="UUID">
@@ -210,8 +211,6 @@
                 <constraints nullable="false"/>
             </column>
             <column name="description" type="TEXT"/>
-
-            <!-- Location -->
             <column name="address" type="VARCHAR(255)"/>
             <column name="city" type="VARCHAR(100)"/>
             <column name="country" type="VARCHAR(100)" defaultValue="CM"/>
@@ -220,13 +219,9 @@
             <column name="latitude" type="DOUBLE PRECISION"/>
             <column name="longitude" type="DOUBLE PRECISION"/>
             <column name="geofence_radius" type="DOUBLE PRECISION" defaultValue="500"/>
-
-            <!-- Contact -->
             <column name="email" type="VARCHAR(255)"/>
             <column name="phone" type="VARCHAR(50)"/>
             <column name="manager_id" type="UUID"/>
-
-            <!-- Config -->
             <column name="is24_hours" type="BOOLEAN" defaultValue="false"/>
             <column name="timezone" type="VARCHAR(50)" defaultValue="Africa/Douala"/>
             <column name="currency" type="VARCHAR(10)" defaultValue="XAF"/>
@@ -237,13 +232,9 @@
             <column name="deposit_percentage" type="DOUBLE PRECISION" defaultValue="30.0"/>
             <column name="min_rental_hours" type="INTEGER" defaultValue="1"/>
             <column name="max_advance_booking_days" type="INTEGER" defaultValue="30"/>
-
-            <!-- Design -->
             <column name="logo_url" type="VARCHAR(255)"/>
             <column name="primary_color" type="VARCHAR(10)" defaultValue="#3b82f6"/>
             <column name="secondary_color" type="VARCHAR(10)" defaultValue="#1e40af"/>
-
-            <!-- Metrics -->
             <column name="active_vehicles" type="INTEGER" defaultValue="0"/>
             <column name="total_vehicles" type="INTEGER" defaultValue="0"/>
             <column name="active_drivers" type="INTEGER" defaultValue="0"/>
@@ -255,7 +246,6 @@
     </changeSet>
 
     <changeSet id="9-create-permissions-postes" author="brayanne">
-
         <createTable tableName="permissions">
             <column name="id" type="UUID">
                 <constraints primaryKey="true" nullable="false"/>
@@ -293,16 +283,11 @@
             </column>
         </createTable>
 
-        <addPrimaryKey tableName="postes_permissions"
-                       columnNames="poste_id, permission_id"
-                       constraintName="pk_postes_permissions"/>
+        <addPrimaryKey tableName="postes_permissions" columnNames="poste_id, permission_id" constraintName="pk_postes_permissions"/>
     </changeSet>
 
     <changeSet id="10-seed-permissions-sql" author="brayanne">
-        <sqlFile path="seeds/01-permissions.sql"
-                 relativeToChangelogFile="true"
-                 splitStatements="true"
-                 stripComments="true"/>
+        <sqlFile path="seeds/01-permissions.sql" relativeToChangelogFile="true" splitStatements="true" stripComments="true"/>
     </changeSet>
 
     <changeSet id="11-allow-null-org-poste" author="brayanne">
@@ -310,38 +295,35 @@
     </changeSet>
 
     <changeSet id="12-seed-default-poste-sql" author="brayanne">
-        <sqlFile path="seeds/02-default-postes.sql"
-                 relativeToChangelogFile="true"
-                 splitStatements="true"
-                 stripComments="true"/>
+        <sqlFile path="seeds/02-default-postes.sql" relativeToChangelogFile="true" splitStatements="true" stripComments="true"/>
     </changeSet>
-    <changeSet id="13-create-staff-table" author="brayan">
-    <createTable tableName="staff">
-        <column name="id" type="UUID">
-            <constraints primaryKey="true" nullable="false"/>
-        </column>
-        <column name="user_id" type="UUID">
-            <constraints nullable="false" foreignKeyName="fk_staff_user" referencedTableName="users" referencedColumnNames="id"/>
-        </column>
-        <column name="organization_id" type="UUID">
-            <constraints nullable="false" foreignKeyName="fk_staff_org" referencedTableName="organizations" referencedColumnNames="id"/>
-        </column>
-        <column name="agency_id" type="UUID">
-            <constraints nullable="false" foreignKeyName="fk_staff_agency" referencedTableName="agencies" referencedColumnNames="id"/>
-        </column>
-        <column name="poste_id" type="UUID">
-            <constraints nullable="false" foreignKeyName="fk_staff_poste" referencedTableName="postes" referencedColumnNames="id"/>
-        </column>
-        <column name="status" type="VARCHAR(20)" defaultValue="ACTIVE"/>
-        <column name="hired_at" type="TIMESTAMP" defaultValueComputed="NOW()"/>
-    </createTable>
-    <!-- Index pour accélérer les recherches par organisation ou agence -->
-    <createIndex tableName="staff" indexName="idx_staff_org">
-        <column name="organization_id"/>
-    </createIndex>
-</changeSet>
 
-    <!-- Table des Véhicules -->
+    <changeSet id="13-create-staff-table" author="brayan">
+        <createTable tableName="staff">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="user_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_staff_user" referencedTableName="users" referencedColumnNames="id"/>
+            </column>
+            <column name="organization_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_staff_org" referencedTableName="organizations" referencedColumnNames="id"/>
+            </column>
+            <column name="agency_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_staff_agency" referencedTableName="agencies" referencedColumnNames="id"/>
+            </column>
+            <column name="poste_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_staff_poste" referencedTableName="postes" referencedColumnNames="id"/>
+            </column>
+            <column name="status" type="VARCHAR(20)" defaultValue="ACTIVE"/>
+            <column name="hired_at" type="TIMESTAMP" defaultValueComputed="NOW()"/>
+        </createTable>
+        <createIndex tableName="staff" indexName="idx_staff_org">
+            <column name="organization_id"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- Table des Véhicules (Ancienne version, sera supprimée) -->
     <changeSet id="14-vehicles" author="hassana">
         <createTable tableName="vehicles">
             <column name="id" type="UUID">
@@ -350,16 +332,13 @@
             <column name="organization_id" type="UUID"><constraints nullable="false"/></column>
             <column name="agency_id" type="UUID"><constraints nullable="false"/></column>
             <column name="category_id" type="UUID"><constraints nullable="false"/></column>
-
             <column name="immatriculation" type="VARCHAR(20)"><constraints unique="true" nullable="false"/></column>
             <column name="marque" type="VARCHAR(100)"/><column name="modele" type="VARCHAR(100)"/>
             <column name="kilometrage" type="DOUBLE PRECISION" defaultValue="0.0"/>
             <column name="transmission" type="VARCHAR(50)"/><column name="couleur" type="VARCHAR(50)"/>
-            <column name="carburant_type" type="VARCHAR(50)"/> <!-- Essence, Diesel, Electrique -->
+            <column name="carburant_type" type="VARCHAR(50)"/>
             <column name="places" type="INTEGER"/><column name="bagage_capacity" type="INTEGER"/>
             <column name="puissance" type="DOUBLE PRECISION"/>
-
-            <!-- Équipements -->
             <column name="has_air_conditioner" type="BOOLEAN" defaultValue="true"/>
             <column name="child_seat_count" type="INTEGER" defaultValue="0"/>
             <column name="has_wifi" type="BOOLEAN" defaultValue="false"/>
@@ -367,24 +346,21 @@
             <column name="gps_type" type="VARCHAR(50)"/>
             <column name="has_bluetooth" type="BOOLEAN" defaultValue="true"/>
             <column name="has_seat_belt" type="BOOLEAN" defaultValue="true"/>
-
             <column name="statut" type="VARCHAR(50)" defaultValue="AVAILABLE"/>
             <column name="image_url" type="VARCHAR(255)"/>
             <column name="created_at" type="TIMESTAMP" defaultValueComputed="NOW()"/>
         </createTable>
     </changeSet>
 
-     <changeSet id="15-vehicle-categories" author="hassana">
+    <changeSet id="15-vehicle-categories" author="hassana">
         <createTable tableName="vehicle_categories">
             <column name="id" type="UUID">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
             <column name="organization_id" type="UUID">
-                <!-- MODIFIÉ : nullable="true" pour permettre les catégories système -->
                 <constraints nullable="true" foreignKeyName="fk_cat_org" referencedTableName="organizations" referencedColumnNames="id"/>
             </column>
             <column name="name" type="VARCHAR(100)">
-                <!-- AJOUTÉ : unique="true" pour que ON CONFLICT fonctionne dans le seeder -->
                 <constraints nullable="false" unique="true"/>
             </column>
             <column name="description" type="TEXT"/>
@@ -406,7 +382,6 @@
             <column name="agency_id" type="UUID">
                 <constraints nullable="false" foreignKeyName="fk_driver_agency" referencedTableName="agencies" referencedColumnNames="id"/>
             </column>
-
             <column name="firstname" type="VARCHAR(100)">
                 <constraints nullable="false"/>
             </column>
@@ -422,7 +397,6 @@
             <column name="gender" type="INTEGER">
                 <constraints nullable="false"/>
             </column>
-
             <column name="profil_url" type="VARCHAR(500)">
                 <constraints nullable="false"/>
             </column>
@@ -432,18 +406,13 @@
             <column name="driving_license_url" type="VARCHAR(500)">
                 <constraints nullable="false"/>
             </column>
-
             <column name="status" type="VARCHAR(50)" defaultValue="ACTIVE"/>
-
             <column name="created_at" type="TIMESTAMP"/>
             <column name="updated_at" type="TIMESTAMP"/>
         </createTable>
     </changeSet>
-    <changeSet id="20251229-merge-staff-to-users" author="hassana">
-        <!-- 1. Suppression de la table staff devenue inutile -->
-        <!-- <dropTable tableName="staff"/> -->
 
-        <!-- 2. Ajout des colonnes opérationnelles à la table users -->
+    <changeSet id="20251229-merge-staff-to-users" author="hassana">
         <addColumn tableName="users">
             <column name="organization_id" type="UUID">
                 <constraints foreignKeyName="fk_user_org" referencedTableName="organizations" referencedColumnNames="id"/>
@@ -458,8 +427,8 @@
             <column name="hired_at" type="TIMESTAMP"/>
         </addColumn>
     </changeSet>
-    <changeSet id="18-create-pricing-schedule-tables" author="brayanne">
 
+    <changeSet id="18-create-pricing-schedule-tables" author="brayanne">
         <createTable tableName="pricings">
             <column name="id" type="UUID">
                 <constraints primaryKey="true" nullable="false"/>
@@ -473,16 +442,12 @@
             <column name="resource_id" type="UUID">
                 <constraints nullable="false"/>
             </column>
-
             <column name="price_per_hour" type="DECIMAL(19,2)"/>
             <column name="price_per_day" type="DECIMAL(19,2)"/>
             <column name="currency" type="VARCHAR(10)" defaultValue="XAF"/>
-
             <column name="created_at" type="TIMESTAMP"/>
             <column name="updated_at" type="TIMESTAMP"/>
         </createTable>
-
-        <!-- J'ai supprimé la première contrainte redondante et gardé la plus stricte -->
         <addUniqueConstraint tableName="pricings" columnNames="resource_type, resource_id" constraintName="uk_pricing_resource"/>
 
         <createTable tableName="schedules">
@@ -492,28 +457,22 @@
             <column name="organization_id" type="UUID">
                 <constraints nullable="false"/>
             </column>
-
-            <column name="resource_type" type="VARCHAR(50)"> <constraints nullable="false"/>
-            </column>
+            <column name="resource_type" type="VARCHAR(50)"> <constraints nullable="false"/> </column>
             <column name="resource_id" type="UUID">
                 <constraints nullable="false"/>
             </column>
-
             <column name="start_date" type="TIMESTAMP">
                 <constraints nullable="false"/>
             </column>
             <column name="end_date" type="TIMESTAMP">
                 <constraints nullable="false"/>
             </column>
-
             <column name="status" type="VARCHAR(50)">
                 <constraints nullable="false"/>
             </column>
             <column name="reason" type="VARCHAR(255)"/>
-
             <column name="created_at" type="TIMESTAMP"/>
         </createTable>
-
         <createIndex tableName="schedules" indexName="idx_schedule_resource">
             <column name="resource_type"/>
             <column name="resource_id"/>
@@ -527,21 +486,17 @@
             <column name="alias_address" type="TEXT"/>
         </addColumn>
     </changeSet>
+
     <changeSet id="19-expand-vehicles-v2" author="brayanne">
         <addColumn tableName="vehicles">
-            <!-- Infos de base supplémentaires -->
-            <column name="vin_number" type="VARCHAR(50)"/> <!-- Numéro de châssis -->
-            <column name="year_production" type="TIMESTAMP"/> <!-- Année de production -->
-
-            <!-- Blocs JSONB pour les objets imbriqués (spécifications techniques) -->
+            <column name="vin_number" type="VARCHAR(50)"/>
+            <column name="year_production" type="TIMESTAMP"/>
             <column name="functionalities" type="jsonb"/>
             <column name="engine_details" type="jsonb"/>
             <column name="fuel_efficiency" type="jsonb"/>
             <column name="insurance_details" type="jsonb"/>
-
-            <!-- Tableaux -->
-            <column name="description_list" type="jsonb"/> <!-- Pour stocker string[] -->
-            <column name="images_list" type="jsonb"/>      <!-- Pour stocker string[] -->
+            <column name="description_list" type="jsonb"/>
+            <column name="images_list" type="jsonb"/>
         </addColumn>
     </changeSet>
 
@@ -552,13 +507,17 @@
         <dropTable tableName="vehicles"/>
     </changeSet>
 
-    <!-- 2. Création de la nouvelle table avec la structure complète -->
+    <!-- 21. Création de la nouvelle table avec la structure complète -->
     <changeSet id="21-recreate-vehicles-v2" author="hassana">
         <createTable tableName="vehicles">
+            <!-- AJOUT DE LA COLONNE ID MANQUANTE -->
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
             <column name="organization_id" type="UUID">
                 <constraints nullable="false" foreignKeyName="fk_veh_org" referencedTableName="organizations" referencedColumnNames="id"/>
             </column>
-
             <column name="agency_id" type="UUID">
                 <constraints nullable="false" foreignKeyName="fk_veh_agency" referencedTableName="agencies" referencedColumnNames="id"/>
             </column>
@@ -591,11 +550,13 @@
             <column name="created_at" type="TIMESTAMP" defaultValueComputed="NOW()"/>
         </createTable>
     </changeSet>
+  
     <changeSet id="20-expand-organization" author="hassana">
         <addColumn tableName="organizations">
             <column name="is_driver_booking_required" type="BOOLEAN" defaultValueBoolean="false"/>
         </addColumn>
     </changeSet>
+
     <changeSet id="22-seed-yearly-plans" author="hassana">
         <insert tableName="subscription_plans">
             <column name="name" value="PRO_YEARLY"/>
@@ -609,7 +570,7 @@
             <column name="has_geofencing" valueBoolean="true"/>
             <column name="has_chat" valueBoolean="true"/>
         </insert>
-
+      
         <insert tableName="subscription_plans">
             <column name="name" value="ENTERPRISE_YEARLY"/>
             <column name="description" value="Accès illimité Enterprise 1 an (2 mois offerts)"/>

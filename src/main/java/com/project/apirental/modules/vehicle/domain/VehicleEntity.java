@@ -13,7 +13,9 @@ import java.util.UUID;
 @Data @Builder @NoArgsConstructor @AllArgsConstructor
 @Table("vehicles")
 public class VehicleEntity implements Persistable<UUID> {
-    @Id private UUID id;
+    @Id
+    private UUID id;
+
     private UUID organizationId;
     private UUID agencyId;
     private UUID categoryId;
@@ -22,23 +24,21 @@ public class VehicleEntity implements Persistable<UUID> {
     private String vinNumber;
     private String brand;
     private String model;
-    private LocalDateTime yearProduction; 
+    private LocalDateTime yearProduction;
     private Integer places;
     private Double kilometrage;
     private String transmission;
     private String color;
     @Builder.Default
     private String statut = "AVAILABLE"; // AVAILABLE, RENTED, MAINTENANCE, UNAVAILABLE
-   
- 
+
     // Stockage JSONB
-    private Json functionalities; 
+    private Json functionalities;
     private Json engineDetails;
     private Json fuelEfficiency;
     private Json insuranceDetails;
     private Json descriptionList;
     private Json imagesList;
-
 
     private LocalDateTime createdAt;
 

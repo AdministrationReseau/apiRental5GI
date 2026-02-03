@@ -44,7 +44,7 @@ public class VehicleService {
     private final VehicleMapper vehicleMapper;
     private final AgencyRepository agencyRepository;
     private final ApplicationEventPublisher eventPublisher;
-  
+
     private final ScheduleService scheduleService;
     private final PricingService pricingService;
     private final ObjectMapper objectMapper;
@@ -56,18 +56,13 @@ public class VehicleService {
                 .flatMap(org -> planRepository.findById(Objects.requireNonNull(org.getSubscriptionPlanId()))
                         .flatMap(plan -> {
 
-                            // 1. VÉRIFICATION QUOTA VÉHICULES
                             if (org.getCurrentVehicles() >= plan.getMaxVehicles()) {
-                                // On précise le type <VehicleEntity> pour l'inférence
                                 return Mono.<VehicleEntity>error(new RuntimeException(
                                         "Quota de véhicules atteint pour votre plan (" + plan.getName() + ")"));
                             }
 
-                            // 2. PRÉPARATION DU VÉHICULE
                             try {
-                                // Conversion des objets DTO en JSON pour la BDD
-                                Json functionalitiesJson = Json
-                                        .of(objectMapper.writeValueAsString(request.functionalities()));
+                                Json functionalitiesJson = Json.of(objectMapper.writeValueAsString(request.functionalities()));
                                 Json engineJson = Json.of(objectMapper.writeValueAsString(request.engineDetails()));
                                 Json fuelEfficiencyJson = Json.of(objectMapper.writeValueAsString(request.fuelEfficiency()));
                                 Json insuranceJson = Json.of(objectMapper.writeValueAsString(request.insuranceDetails()));
@@ -75,7 +70,7 @@ public class VehicleService {
                                 Json imgsJson = Json.of(objectMapper.writeValueAsString(request.images()));
 
                                 VehicleEntity vehicle = VehicleEntity.builder()
-                                        .id(UUID.randomUUID())
+                                        .id(UUID.randomUUID()) // Génération explicite de l'ID
                                         .organizationId(orgId)
                                         .agencyId(request.agencyId())
                                         .categoryId(request.categoryId())
@@ -89,7 +84,6 @@ public class VehicleService {
                                         .statut(request.statut())
                                         .color(request.color())
                                         .transmission(request.transmission())
-                                        // Injection JSONB
                                         .functionalities(functionalitiesJson)
                                         .engineDetails(engineJson)
                                         .fuelEfficiency(fuelEfficiencyJson)
@@ -101,15 +95,11 @@ public class VehicleService {
                                         .isNewRecord(true)
                                         .build();
 
-                                // 3. SAUVEGARDE ET MISE À JOUR DES COMPTEURS
                                 return vehicleRepository.save(Objects.requireNonNull(vehicle))
                                         .flatMap(savedVehicle -> {
-                                            // Mise à jour du compteur de l'organisation
                                             org.setCurrentVehicles(org.getCurrentVehicles() + 1);
-
                                             return organizationRepository.save(org)
                                                     .then(updateAgencyVehicleStats(request.agencyId(), 1))
-                                                    // On retourne le véhicule sauvegardé pour la suite de la chaîne
                                                     .thenReturn(savedVehicle);
                                         });
                             } catch (Exception e) {
@@ -117,7 +107,6 @@ public class VehicleService {
                             }
 
                         }))
-                // 4. ENRICHISSEMENT ET MAPPING VERS DTO (C'est ici que le lien se fait)
                 .flatMap(savedVehicle -> categoryRepository
                         .findById(Objects.requireNonNull(savedVehicle.getCategoryId()))
                         .map(cat -> vehicleMapper.toDto(savedVehicle, cat))
@@ -138,12 +127,8 @@ public class VehicleService {
     public Mono<VehicleDetailResponseDTO> getVehicleDetails(UUID id) {
         return vehicleRepository.findById(Objects.requireNonNull(id))
             .flatMap(vehicle -> {
-                // Pour le prix, on cherche d'abord le prix du véhicule, sinon celui de la catégorie
                 Mono<PricingEntity> pricingMono = pricingService.getPricing(ResourceType.VEHICLE, id);
-
                 var scheduleFlux = scheduleService.getResourceSchedule(ResourceType.VEHICLE, id).collectList();
-
-                // On doit enrichir le DTO Vehicle de base (avec catégorie)
                 Mono<VehicleResponseDTO> vehicleDtoMono = enrichVehicle(vehicle);
 
                 return Mono.zip(vehicleDtoMono, pricingMono.defaultIfEmpty(new PricingEntity()), scheduleFlux)
@@ -155,12 +140,9 @@ public class VehicleService {
     public Mono<VehicleDetailResponseDTO> updateVehicleStatusAndPricing(UUID id, UpdateVehicleStatusDTO request) {
         return vehicleRepository.findById(Objects.requireNonNull(id))
             .flatMap(vehicle -> {
-                // 1. Statut global
                 if (request.globalStatus() != null) {
                     vehicle.setStatut(request.globalStatus());
                 }
-
-                // 2. Prix (Spécifique au véhicule)
                 Mono<Void> pricingMono = Mono.empty();
                 if (request.pricePerHour() != null || request.pricePerDay() != null) {
                     pricingMono = pricingService.setPricing(
@@ -171,8 +153,6 @@ public class VehicleService {
                         request.pricePerDay()
                     ).then();
                 }
-
-                // 3. Planning (Maintenance, etc.)
                 Mono<Void> scheduleMono = Mono.empty();
                 if (request.schedule() != null) {
                     scheduleMono = scheduleService.addUnavailability(
@@ -182,7 +162,6 @@ public class VehicleService {
                         request.schedule()
                     ).then();
                 }
-
                 return vehicleRepository.save(vehicle)
                     .then(pricingMono)
                     .then(scheduleMono)
@@ -232,9 +211,7 @@ public class VehicleService {
                     v.setColor(request.color());
                     v.setTransmission(request.transmission());
                     try {
-                        // Conversion des objets DTO en JSON pour la BDD
-                        Json functionalitiesJson = Json
-                                .of(objectMapper.writeValueAsString(request.functionalities()));
+                        Json functionalitiesJson = Json.of(objectMapper.writeValueAsString(request.functionalities()));
                         Json engineJson = Json.of(objectMapper.writeValueAsString(request.engineDetails()));
                         Json fuelEfficiencyJson = Json.of(objectMapper.writeValueAsString(request.fuelEfficiency()));
                         Json insuranceJson = Json.of(objectMapper.writeValueAsString(request.insuranceDetails()));

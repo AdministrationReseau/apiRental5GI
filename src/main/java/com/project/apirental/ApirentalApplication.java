@@ -7,7 +7,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 
 @SpringBootApplication
 @EnableR2dbcAuditing // Active l'audit automatique pour R2DBC (dates de création, etc.)
-@EnableAsync         // Indispensable pour que votre @Async dans AuditListener fonctionne
+@EnableAsync
 public class ApirentalApplication {
 
     public static void main(String[] args) {

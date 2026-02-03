@@ -7,5 +7,7 @@ package com.project.apirental.modules.subscription.domain;
 public enum PlanType {
     FREE,
     PRO,
-    ENTERPRISE
+    PRO_YEARLY,
+    ENTERPRISE,
+    ENTERPRISE_YEARLY
 }

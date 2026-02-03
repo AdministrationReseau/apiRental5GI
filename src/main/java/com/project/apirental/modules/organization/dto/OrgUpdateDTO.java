@@ -31,5 +31,7 @@ public record OrgUpdateDTO(
     @NotNull
     String registrationNumber,
     @NotNull
-    String taxNumber
+    String taxNumber,
+    @NotNull
+    Boolean isDriverBookingRequired
 ) {}

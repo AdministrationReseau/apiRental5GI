@@ -550,6 +550,12 @@
             <column name="created_at" type="TIMESTAMP" defaultValueComputed="NOW()"/>
         </createTable>
     </changeSet>
+  
+    <changeSet id="20-expand-organization" author="hassana">
+        <addColumn tableName="organizations">
+            <column name="is_driver_booking_required" type="BOOLEAN" defaultValueBoolean="false"/>
+        </addColumn>
+    </changeSet>
 
     <changeSet id="22-seed-yearly-plans" author="hassana">
         <insert tableName="subscription_plans">
@@ -564,6 +570,7 @@
             <column name="has_geofencing" valueBoolean="true"/>
             <column name="has_chat" valueBoolean="true"/>
         </insert>
+      
         <insert tableName="subscription_plans">
             <column name="name" value="ENTERPRISE_YEARLY"/>
             <column name="description" value="Accès illimité Enterprise 1 an (2 mois offerts)"/>

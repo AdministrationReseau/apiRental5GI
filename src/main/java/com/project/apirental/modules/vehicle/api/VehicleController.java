@@ -48,6 +48,12 @@ public class VehicleController {
         return vehicleService.getVehiclesByAgency(agencyId);
     }
 
+    @Operation(summary = "Lister tous les véhicules disponibles sur la plateforme")
+    @GetMapping("/available")
+    public Flux<VehicleResponseDTO> getAvailableVehicles() {
+        return vehicleService.getAvailableVehicles();
+    }
+
     @Operation(summary = "Obtenir les détails complets (Planning + Prix) d'un véhicule")
     @GetMapping("/{id}/details")
     public Mono<ResponseEntity<VehicleDetailResponseDTO>> getVehicleDetails(@PathVariable UUID id) {

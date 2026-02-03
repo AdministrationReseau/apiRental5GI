@@ -26,6 +26,12 @@ public class AgencyController {
     private final AgencyService agencyService;
 
     
+    @Operation(summary = "Lister toutes les agences de la plateforme")
+    @GetMapping("/all")
+    public Flux<AgencyResponseDTO> getAll() {
+        return agencyService.getAllAgencies();
+    }
+
     @Operation(summary = "Lister les agences d'une organisation")
     @GetMapping("/org/{orgId}")
     // @PreAuthorize("hasRole('ORGANIZATION') or hasRole('ADMIN')")

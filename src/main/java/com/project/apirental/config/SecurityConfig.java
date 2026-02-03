@@ -25,6 +25,8 @@ public class SecurityConfig {
                         .pathMatchers("/auth/**", "/swagger-ui.html", "/webjars/**", "/v3/api-docs/**").permitAll()
                         .pathMatchers("/api/subscriptions/plans/**").permitAll()
                         .pathMatchers(HttpMethod.PUT, "/api/subscriptions/plans/**").hasRole("ADMIN")
+                        // Endpoints publics supplémentaires demandés :
+                        .pathMatchers("/api/vehicles/available", "/api/vehicles/categories/all", "/api/agencies/all", "/api/org/all").permitAll()
                         .pathMatchers("/api/org/**").hasRole("ORGANIZATION")
                         .pathMatchers("/uploads/**").permitAll()
                         .anyExchange().authenticated()

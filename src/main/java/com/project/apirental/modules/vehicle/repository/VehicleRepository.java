@@ -12,6 +12,10 @@ import java.util.UUID;
 public interface VehicleRepository extends R2dbcRepository<VehicleEntity, UUID> {
     Flux<VehicleEntity> findAllByAgencyId(UUID agencyId);
     Flux<VehicleEntity> findAllByOrganizationId(UUID organizationId);
+
+    // Récupère tous les véhicules par statut (ex: "AVAILABLE")
+    Flux<VehicleEntity> findAllByStatut(String statut);
+
     @Query("SELECT organization_id FROM vehicles WHERE id = :vehicleId")
     Mono<UUID> findOrgIdByVehicleId(UUID vehicleId);
     Flux<VehicleEntity> findAllByOrganizationIdAndCategoryId(UUID organizationId, UUID categoryId);

@@ -51,6 +51,11 @@ public class CategoryController {
         return categoryRepository.findAllByOrganizationIdOrSystem(orgId);
     }
 
+    @Operation(summary = "Lister toutes les catégories de véhicules (plateforme)")
+    @GetMapping("/all")
+    public Flux<VehicleCategoryEntity> getAllCategories() {
+        return categoryRepository.findAll();
+    }
 
     @Operation(summary = "Lister toutes les catégories utilisables par une agence (Org + Système)")
     @GetMapping("/agency/{agencyId}")

@@ -201,6 +201,14 @@ public class VehicleService {
                 .flatMap(this::enrichVehicle);
     }
 
+    /**
+     * Lister tous les véhicules disponibles sur la plateforme (statut = AVAILABLE)
+     */
+    public Flux<VehicleResponseDTO> getAvailableVehicles() {
+        return vehicleRepository.findAllByStatut("AVAILABLE")
+                .flatMap(this::enrichVehicle);
+    }
+
     public Mono<VehicleResponseDTO> getVehicleById(UUID id) {
         return vehicleRepository.findById(Objects.requireNonNull(id))
                 .flatMap(this::enrichVehicle);

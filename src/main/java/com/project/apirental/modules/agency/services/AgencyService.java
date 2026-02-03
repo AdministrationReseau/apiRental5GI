@@ -105,6 +105,13 @@ public class AgencyService {
                 .map(agencyMapper::toDto);
     }
 
+    /**
+     * Lister toutes les agences de la plateforme
+     */
+    public Flux<AgencyResponseDTO> getAllAgencies() {
+        return agencyRepository.findAll().map(agencyMapper::toDto);
+    }
+
     public Mono<AgencyResponseDTO> getAgency(UUID id) {
         return agencyRepository.findById(Objects.requireNonNull(id))
                 .map(agencyMapper::toDto)

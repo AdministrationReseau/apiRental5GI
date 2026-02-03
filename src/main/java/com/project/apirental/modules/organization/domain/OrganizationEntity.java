@@ -85,4 +85,7 @@ public class OrganizationEntity implements Persistable<UUID> {
     public boolean isNew() {
         return isNewRecord || id == null;
     }
+
+    @Builder.Default
+    private Boolean isDriverBookingRequired = false;
 }

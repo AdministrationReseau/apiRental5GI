@@ -36,7 +36,8 @@ public class OrgMapper {
             entity.getSubscriptionExpiresAt(),
             entity.getTotalRentals(),
             entity.getMonthlyRevenue(),
-            entity.getYearlyRevenue()
+            entity.getYearlyRevenue(),
+            entity.getIsDriverBookingRequired()
         );
     }
 }

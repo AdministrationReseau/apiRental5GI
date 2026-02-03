@@ -129,6 +129,7 @@ public class AuthService {
                                         .subscriptionAutoRenew(true)
                                         .isVerified(false)
                                         .isNewRecord(true)
+                                        .isDriverBookingRequired(false)
                                         .build();
 
                                 return orgRepository.save(Objects.requireNonNull(org))

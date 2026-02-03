@@ -93,6 +93,7 @@ public class OrganizationController {
             @RequestPart(value = "website", required = false) String website,
             @RequestPart(value = "registrationNumber", required = false) String registrationNumber,
             @RequestPart(value = "taxNumber", required = false) String taxNumber,
+            @RequestPart(value = "isDriverBookingRequired", required = false) Boolean isDriverBookingRequired,
             // Fichiers facultatifs
             @RequestPart(value = "logo", required = false) FilePart logoFile,
             @RequestPart(value = "license", required = false) FilePart licenseFile
@@ -103,7 +104,7 @@ public class OrganizationController {
                 name, description, address, city, postalCode, region, phone, email, website,
                 null, // timezone géré à part ou via autre endpoint si complexe
                 null, // logoUrl géré par le fichier
-                registrationNumber, taxNumber
+                registrationNumber, taxNumber, isDriverBookingRequired // isDriverBookingRequired
         );
 
         return organizationService.updateOrganizationWithMedia(id, partialDto, logoFile, licenseFile)

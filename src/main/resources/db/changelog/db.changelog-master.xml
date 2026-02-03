@@ -591,4 +591,9 @@
             <column name="created_at" type="TIMESTAMP" defaultValueComputed="NOW()"/>
         </createTable>
     </changeSet>
+    <changeSet id="20-expand-organization" author="hassana">
+        <addColumn tableName="organizations">
+            <column name="is_driver_booking_required" type="BOOLEAN" defaultValueBoolean="false"/>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

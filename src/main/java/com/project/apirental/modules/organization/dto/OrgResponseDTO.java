@@ -28,5 +28,6 @@ public record OrgResponseDTO(
     LocalDateTime subscriptionExpiresAt,
     Integer totalRentals,
     Double monthlyRevenue,
-    Double yearlyRevenue
+    Double yearlyRevenue,
+    Boolean isDriverBookingRequired
 ) {}

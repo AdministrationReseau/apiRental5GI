@@ -40,6 +40,9 @@ public class VehicleEntity implements Persistable<UUID> {
     private Json descriptionList;
     private Json imagesList;
 
+    @Builder.Default
+    private Double rating = 0.0;
+
     private LocalDateTime createdAt;
 
     @Transient @Builder.Default @JsonIgnore private boolean isNewRecord = false;

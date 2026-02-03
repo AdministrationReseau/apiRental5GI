@@ -7,12 +7,14 @@ import com.project.apirental.modules.driver.mapper.DriverMapper;
 import com.project.apirental.modules.driver.repository.DriverRepository;
 import com.project.apirental.modules.media.domain.MediaEntity;
 import com.project.apirental.modules.media.services.MediaService;
+import com.project.apirental.modules.organization.repository.OrganizationRepository; // Ajouté
 import com.project.apirental.modules.organization.services.OrganizationService;
 import com.project.apirental.modules.driver.dto.DriverDetailResponseDTO;
 import com.project.apirental.modules.driver.dto.UpdateDriverStatusDTO;
 import com.project.apirental.modules.pricing.domain.PricingEntity;
 import com.project.apirental.modules.pricing.services.PricingService;
 import com.project.apirental.modules.schedule.services.ScheduleService;
+import com.project.apirental.modules.review.services.ReviewService;
 import com.project.apirental.shared.enums.ResourceType;
 import com.project.apirental.shared.events.AuditEvent;
 import lombok.RequiredArgsConstructor;
@@ -34,14 +36,14 @@ public class DriverService {
     private final DriverRepository driverRepository;
     private final AgencyRepository agencyRepository;
     private final OrganizationService organizationService;
+    private final OrganizationRepository organizationRepository; // Injecté pour récupérer le flag
     private final MediaService mediaService;
     private final DriverMapper driverMapper;
     private final ApplicationEventPublisher eventPublisher;
     private final ScheduleService scheduleService;
     private final PricingService pricingService;
-    /**
-     * Création d'un conducteur avec Upload de fichiers et vérification de Quota
-     */
+    private final ReviewService reviewService;
+
     @Transactional
     public Mono<DriverResponseDTO> createDriver(
             UUID orgId,
@@ -49,21 +51,18 @@ public class DriverService {
             String firstname, String lastname, String tel, Integer age, Integer gender,
             FilePart profilFile, FilePart cniFile, FilePart licenseFile) {
 
-        // 1. Vérification du Quota Conducteur (DRIVER)
         return organizationService.validateQuota(orgId, "DRIVER")
             .flatMap(hasQuota -> {
                 if (!hasQuota) {
                     return Mono.error(new RuntimeException("Quota de chauffeurs atteint pour votre plan."));
                 }
 
-                // 2. Upload des fichiers en parallèle
                 Mono<String> profilUrlMono = mediaService.uploadFile(profilFile).map(MediaEntity::getFileUrl);
                 Mono<String> cniUrlMono = mediaService.uploadFile(cniFile).map(MediaEntity::getFileUrl);
                 Mono<String> licenseUrlMono = mediaService.uploadFile(licenseFile).map(MediaEntity::getFileUrl);
 
                 return Mono.zip(profilUrlMono, cniUrlMono, licenseUrlMono)
                     .flatMap(tuple -> {
-                        // 3. Construction de l'entité
                         DriverEntity driver = DriverEntity.builder()
                                 .id(UUID.randomUUID())
                                 .organizationId(orgId)
@@ -78,10 +77,10 @@ public class DriverService {
                                 .drivingLicenseUrl(tuple.getT3())
                                 .createdAt(LocalDateTime.now())
                                 .updatedAt(LocalDateTime.now())
+                                .rating(0.0)
                                 .isNewRecord(true)
                                 .build();
 
-                        // 4. Sauvegarde et mise à jour des compteurs
                         return driverRepository.save(driver).flatMap(saved -> {
                             if (saved != null) {
                                 return organizationService.updateDriverCounter(orgId, 1)
@@ -102,9 +101,7 @@ public class DriverService {
                 .map(driverMapper::toDto);
     }
 
-    /**
-     * Récupère le détail complet d'un chauffeur (Info + Prix + Planning)
-     */
+    // --- METHODE MISE A JOUR : getDriverDetails ---
     public Mono<DriverDetailResponseDTO> getDriverDetails(UUID id) {
         return driverRepository.findById(Objects.requireNonNull(id))
             .switchIfEmpty(Mono.error(new RuntimeException("Driver not found")))
@@ -112,9 +109,22 @@ public class DriverService {
                 var dto = driverMapper.toDto(driver);
                 var pricingMono = pricingService.getPricing(ResourceType.DRIVER, id);
                 var scheduleFlux = scheduleService.getResourceSchedule(ResourceType.DRIVER, id).collectList();
+                var reviewsFlux = reviewService.getReviews(ResourceType.DRIVER, id).collectList();
 
-                return Mono.zip(pricingMono.defaultIfEmpty(new PricingEntity()), scheduleFlux)
-                    .map(tuple -> new DriverDetailResponseDTO(dto, tuple.getT1().getId() == null ? null : tuple.getT1(), tuple.getT2()));
+                // Récupération de l'organisation pour le flag isDriverBookingRequired
+                Mono<Boolean> orgRequirementMono = organizationRepository.findById(driver.getOrganizationId())
+                        .map(org -> org.getIsDriverBookingRequired() != null ? org.getIsDriverBookingRequired() : false)
+                        .defaultIfEmpty(false);
+
+                return Mono.zip(pricingMono.defaultIfEmpty(new PricingEntity()), scheduleFlux, reviewsFlux, orgRequirementMono)
+                    .map(tuple -> new DriverDetailResponseDTO(
+                        dto,
+                        tuple.getT1().getId() == null ? null : tuple.getT1(),
+                        tuple.getT2(),
+                        driver.getRating(),
+                        tuple.getT3(),
+                        tuple.getT4() // isDriverBookingRequired
+                    ));
             });
     }
 
@@ -129,9 +139,6 @@ public class DriverService {
                 .switchIfEmpty(Mono.error(new RuntimeException("Conducteur non trouvé")));
     }
 
-    /**
-     * Changement d'agence pour un chauffeur
-     */
     @Transactional
     public Mono<DriverResponseDTO> changeAgency(UUID driverId, UUID newAgencyId) {
         return driverRepository.findById(Objects.requireNonNull(driverId))
@@ -144,7 +151,6 @@ public class DriverService {
                     driver.setAgencyId(newAgencyId);
                     driver.setUpdatedAt(LocalDateTime.now());
 
-                    // Mise à jour des compteurs (On retire de l'ancienne, on ajoute à la nouvelle)
                     return updateAgencyDriverStats(oldAgencyId, -1)
                             .then(updateAgencyDriverStats(newAgencyId, 1))
                             .then(driverRepository.save(driver));
@@ -152,19 +158,14 @@ public class DriverService {
                 .map(driverMapper::toDto);
     }
 
-    /**
-     * Mise à jour complexe : Statut Global + Ajout Indisponibilité (Schedule) + Prix
-     */
     @Transactional
     public Mono<DriverDetailResponseDTO> updateDriverStatusAndPricing(UUID id, UpdateDriverStatusDTO request) {
         return driverRepository.findById(Objects.requireNonNull(id))
             .flatMap(driver -> {
-                // 1. Mise à jour statut global immédiat (ex: le chauffeur est malade MAINTENANT)
                 if (request.globalStatus() != null) {
                     driver.setStatus(request.globalStatus());
                 }
 
-                // 2. Gestion du Prix
                 Mono<Void> pricingMono = Mono.empty();
                 if (request.pricePerHour() != null || request.pricePerDay() != null) {
                     pricingMono = pricingService.setPricing(
@@ -176,7 +177,6 @@ public class DriverService {
                     ).then();
                 }
 
-                // 3. Gestion du Planning (Indisponibilité)
                 Mono<Void> scheduleMono = Mono.empty();
                 if (request.schedule() != null) {
                     scheduleMono = scheduleService.addUnavailability(
@@ -192,7 +192,7 @@ public class DriverService {
                     .then(scheduleMono)
                     .thenReturn(driver);
             })
-            .flatMap(driver -> getDriverDetails(driver.getId())); // Retourne l'objet enrichi
+            .flatMap(driver -> getDriverDetails(driver.getId()));
     }
 
     @Transactional
@@ -203,7 +203,6 @@ public class DriverService {
                         .then(updateAgencyDriverStats(driver.getAgencyId(), -1)));
     }
 
-    // Helper pour mettre à jour les stats de l'agence
     private Mono<Void> updateAgencyDriverStats(UUID agencyId, int increment) {
         return agencyRepository.findById(Objects.requireNonNull(agencyId))
                 .flatMap(agency -> {

@@ -26,7 +26,7 @@ public class DriverEntity implements Persistable<UUID> {
     private String lastname;
     private String tel;
     private Integer age;
-    private Integer gender; // 0: Homme, 1: Femme 
+    private Integer gender; // 0: Homme, 1: Femme
 
     // URLs stockées après upload via MediaService
     private String profilUrl;
@@ -35,6 +35,9 @@ public class DriverEntity implements Persistable<UUID> {
 
     @Builder.Default
     private String status = "ACTIVE"; // ACTIVE, INACTIVE
+
+    @Builder.Default
+    private Double rating = 0.0;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

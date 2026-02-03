@@ -18,6 +18,7 @@ import com.project.apirental.modules.vehicle.dto.UpdateVehicleStatusDTO;
 import com.project.apirental.modules.pricing.domain.PricingEntity;
 import com.project.apirental.modules.pricing.services.PricingService;
 import com.project.apirental.modules.schedule.services.ScheduleService;
+import com.project.apirental.modules.review.services.ReviewService;
 import com.project.apirental.shared.enums.ResourceType;
 import com.project.apirental.shared.events.AuditEvent;
 import lombok.RequiredArgsConstructor;
@@ -47,6 +48,7 @@ public class VehicleService {
 
     private final ScheduleService scheduleService;
     private final PricingService pricingService;
+    private final ReviewService reviewService;
     private final ObjectMapper objectMapper;
 
     @Transactional
@@ -70,7 +72,7 @@ public class VehicleService {
                                 Json imgsJson = Json.of(objectMapper.writeValueAsString(request.images()));
 
                                 VehicleEntity vehicle = VehicleEntity.builder()
-                                        .id(UUID.randomUUID()) // Génération explicite de l'ID
+                                        .id(UUID.randomUUID())
                                         .organizationId(orgId)
                                         .agencyId(request.agencyId())
                                         .categoryId(request.categoryId())
@@ -92,6 +94,7 @@ public class VehicleService {
                                         .imagesList(imgsJson)
                                         .createdAt(LocalDateTime.now())
                                         .statut("AVAILABLE")
+                                        .rating(0.0)
                                         .isNewRecord(true)
                                         .build();
 
@@ -124,15 +127,32 @@ public class VehicleService {
                 }).then();
     }
 
+    // --- METHODE MISE A JOUR : getVehicleDetails ---
     public Mono<VehicleDetailResponseDTO> getVehicleDetails(UUID id) {
         return vehicleRepository.findById(Objects.requireNonNull(id))
             .flatMap(vehicle -> {
+                // 1. Récupération des données liées
                 Mono<PricingEntity> pricingMono = pricingService.getPricing(ResourceType.VEHICLE, id);
                 var scheduleFlux = scheduleService.getResourceSchedule(ResourceType.VEHICLE, id).collectList();
+                var reviewsFlux = reviewService.getReviews(ResourceType.VEHICLE, id).collectList();
+
+                // 2. Récupération de l'organisation pour le flag isDriverBookingRequired
+                Mono<Boolean> orgRequirementMono = organizationRepository.findById(vehicle.getOrganizationId())
+                        .map(org -> org.getIsDriverBookingRequired() != null ? org.getIsDriverBookingRequired() : false)
+                        .defaultIfEmpty(false);
+
                 Mono<VehicleResponseDTO> vehicleDtoMono = enrichVehicle(vehicle);
 
-                return Mono.zip(vehicleDtoMono, pricingMono.defaultIfEmpty(new PricingEntity()), scheduleFlux)
-                    .map(tuple -> new VehicleDetailResponseDTO(tuple.getT1(), tuple.getT2().getId() == null ? null : tuple.getT2(), tuple.getT3()));
+                // 3. Assemblage
+                return Mono.zip(vehicleDtoMono, pricingMono.defaultIfEmpty(new PricingEntity()), scheduleFlux, reviewsFlux, orgRequirementMono)
+                    .map(tuple -> new VehicleDetailResponseDTO(
+                        tuple.getT1(), // VehicleDTO
+                        tuple.getT2().getId() == null ? null : tuple.getT2(), // Pricing
+                        tuple.getT3(), // Schedule
+                        vehicle.getRating(), // Rating
+                        tuple.getT4(), // Reviews
+                        tuple.getT5()  // isDriverBookingRequired (Boolean)
+                    ));
             });
     }
 
@@ -180,9 +200,6 @@ public class VehicleService {
                 .flatMap(this::enrichVehicle);
     }
 
-    /**
-     * Lister tous les véhicules disponibles sur la plateforme (statut = AVAILABLE)
-     */
     public Flux<VehicleResponseDTO> getAvailableVehicles() {
         return vehicleRepository.findAllByStatut("AVAILABLE")
                 .flatMap(this::enrichVehicle);

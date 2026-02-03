@@ -550,7 +550,7 @@
             <column name="created_at" type="TIMESTAMP" defaultValueComputed="NOW()"/>
         </createTable>
     </changeSet>
-  
+
     <changeSet id="20-expand-organization" author="hassana">
         <addColumn tableName="organizations">
             <column name="is_driver_booking_required" type="BOOLEAN" defaultValueBoolean="false"/>
@@ -570,7 +570,7 @@
             <column name="has_geofencing" valueBoolean="true"/>
             <column name="has_chat" valueBoolean="true"/>
         </insert>
-      
+
         <insert tableName="subscription_plans">
             <column name="name" value="ENTERPRISE_YEARLY"/>
             <column name="description" value="Accès illimité Enterprise 1 an (2 mois offerts)"/>
@@ -583,5 +583,43 @@
             <column name="has_geofencing" valueBoolean="true"/>
             <column name="has_chat" valueBoolean="true"/>
         </insert>
+    </changeSet>
+
+    <changeSet id="23-add-reviews-and-ratings" author="brayanne">
+
+        <!-- Création table reviews -->
+        <createTable tableName="reviews">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="resource_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="resource_type" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="rating" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="comment" type="TEXT"/>
+            <column name="author_name" type="VARCHAR(255)"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="NOW()"/>
+        </createTable>
+
+        <createIndex tableName="reviews" indexName="idx_reviews_resource">
+            <column name="resource_type"/>
+            <column name="resource_id"/>
+        </createIndex>
+
+        <!-- Ajout de la note moyenne aux véhicules -->
+        <addColumn tableName="vehicles">
+            <column name="rating" type="DOUBLE PRECISION" defaultValueNumeric="0.0"/>
+        </addColumn>
+
+        <!-- Ajout de la note moyenne aux chauffeurs -->
+        <addColumn tableName="drivers">
+            <column name="rating" type="DOUBLE PRECISION" defaultValueNumeric="0.0"/>
+        </addColumn>
+
     </changeSet>
 </databaseChangeLog>

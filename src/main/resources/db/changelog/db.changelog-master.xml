@@ -596,4 +596,31 @@
             <column name="is_driver_booking_required" type="BOOLEAN" defaultValueBoolean="false"/>
         </addColumn>
     </changeSet>
+    <changeSet id="22-seed-yearly-plans" author="hassana">
+        <insert tableName="subscription_plans">
+            <column name="name" value="PRO_YEARLY"/>
+            <column name="description" value="Plan professionnel 1 an (2 mois offerts)"/>
+            <column name="price" valueNumeric="100000.00"/>
+            <column name="duration_days" valueNumeric="365"/>
+            <column name="max_vehicles" valueNumeric="50"/>
+            <column name="max_drivers" valueNumeric="50"/>
+            <column name="max_agencies" valueNumeric="10"/>
+            <column name="max_users" valueNumeric="30"/>
+            <column name="has_geofencing" valueBoolean="true"/>
+            <column name="has_chat" valueBoolean="true"/>
+        </insert>
+
+        <insert tableName="subscription_plans">
+            <column name="name" value="ENTERPRISE_YEARLY"/>
+            <column name="description" value="Accès illimité Enterprise 1 an (2 mois offerts)"/>
+            <column name="price" valueNumeric="300000.00"/>
+            <column name="duration_days" valueNumeric="365"/>
+            <column name="max_vehicles" valueNumeric="999999"/>
+            <column name="max_drivers" valueNumeric="999999"/>
+            <column name="max_agencies" valueNumeric="999999"/>
+            <column name="max_users" valueNumeric="999999"/>
+            <column name="has_geofencing" valueBoolean="true"/>
+            <column name="has_chat" valueBoolean="true"/>
+        </insert>
+    </changeSet>
 </databaseChangeLog>

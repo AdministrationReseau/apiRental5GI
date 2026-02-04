@@ -1,21 +1,26 @@
 package com.project.apirental.modules.vehicle.api;
 
+import com.project.apirental.modules.driver.dto.DriverResponseDTO;
+import com.project.apirental.modules.driver.services.DriverService;
 import com.project.apirental.modules.vehicle.dto.VehicleRequestDTO;
 import com.project.apirental.modules.vehicle.dto.VehicleResponseDTO;
 import com.project.apirental.modules.vehicle.services.VehicleService;
 import com.project.apirental.modules.vehicle.dto.VehicleDetailResponseDTO;
 import com.project.apirental.modules.vehicle.dto.UpdateVehicleStatusDTO;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @RestController
@@ -26,6 +31,7 @@ import java.util.UUID;
 public class VehicleController {
 
     private final VehicleService vehicleService;
+    private final DriverService driverService; // Injection du service Driver
 
     @Operation(summary = "Ajouter un véhicule à la flotte (Vérifie les quotas)")
     @NotNull
@@ -37,7 +43,6 @@ public class VehicleController {
 
     @Operation(summary = "Lister tous les véhicules d'une organisation")
     @GetMapping("/org/{orgId}")
-    // @PreAuthorize("hasRole('ORGANIZATION') or hasRole('ADMIN')")
     public Flux<VehicleResponseDTO> getAllByOrg(@PathVariable UUID orgId) {
         return vehicleService.getVehiclesByOrg(orgId);
     }
@@ -54,7 +59,19 @@ public class VehicleController {
         return vehicleService.getAvailableVehicles();
     }
 
-    @Operation(summary = "Obtenir les détails complets (Planning + Prix) d'un véhicule")
+    // --- NOUVEL ENDPOINT DEMANDÉ ---
+    @Operation(summary = "Trouver les chauffeurs disponibles pour une agence sur une période")
+    @GetMapping("/drivers/available")
+    public Flux<DriverResponseDTO> getAvailableDriversForBooking(
+            @Parameter(description = "ID de l'agence") @RequestParam UUID agencyId,
+            @Parameter(description = "Date de début (ISO-8601)") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @Parameter(description = "Date de fin (ISO-8601)") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate
+    ) {
+        return driverService.getAvailableDrivers(agencyId, startDate, endDate);
+    }
+    // -------------------------------
+
+    @Operation(summary = "Obtenir les détails complets (Planning + Prix + evaluation) d'un véhicule")
     @GetMapping("/{id}/details")
     public Mono<ResponseEntity<VehicleDetailResponseDTO>> getVehicleDetails(@PathVariable UUID id) {
         return vehicleService.getVehicleDetails(id).map(ResponseEntity::ok);
@@ -100,7 +117,7 @@ public class VehicleController {
     @GetMapping("/org/{orgId}/category/{categoryId}")
     @PreAuthorize("@rbac.hasPermission(#orgId, 'vehicle:list')")
     public Flux<VehicleResponseDTO> getByOrgAndCategory(
-            @PathVariable UUID orgId, 
+            @PathVariable UUID orgId,
             @PathVariable UUID categoryId) {
         return vehicleService.getVehiclesByOrgAndCategory(orgId, categoryId);
     }
@@ -109,7 +126,7 @@ public class VehicleController {
     @GetMapping("/agency/{agencyId}/category/{categoryId}")
     @PreAuthorize("@rbac.canAccessAgency(#agencyId, 'vehicle:list')")
     public Flux<VehicleResponseDTO> getByAgencyAndCategory(
-            @PathVariable UUID agencyId, 
+            @PathVariable UUID agencyId,
             @PathVariable UUID categoryId) {
         return vehicleService.getVehiclesByAgencyAndCategory(agencyId, categoryId);
     }

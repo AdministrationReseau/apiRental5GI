@@ -7,7 +7,7 @@ import com.project.apirental.modules.driver.mapper.DriverMapper;
 import com.project.apirental.modules.driver.repository.DriverRepository;
 import com.project.apirental.modules.media.domain.MediaEntity;
 import com.project.apirental.modules.media.services.MediaService;
-import com.project.apirental.modules.organization.repository.OrganizationRepository; // Ajouté
+import com.project.apirental.modules.organization.repository.OrganizationRepository;
 import com.project.apirental.modules.organization.services.OrganizationService;
 import com.project.apirental.modules.driver.dto.DriverDetailResponseDTO;
 import com.project.apirental.modules.driver.dto.UpdateDriverStatusDTO;
@@ -36,7 +36,7 @@ public class DriverService {
     private final DriverRepository driverRepository;
     private final AgencyRepository agencyRepository;
     private final OrganizationService organizationService;
-    private final OrganizationRepository organizationRepository; // Injecté pour récupérer le flag
+    private final OrganizationRepository organizationRepository;
     private final MediaService mediaService;
     private final DriverMapper driverMapper;
     private final ApplicationEventPublisher eventPublisher;
@@ -101,7 +101,6 @@ public class DriverService {
                 .map(driverMapper::toDto);
     }
 
-    // --- METHODE MISE A JOUR : getDriverDetails ---
     public Mono<DriverDetailResponseDTO> getDriverDetails(UUID id) {
         return driverRepository.findById(Objects.requireNonNull(id))
             .switchIfEmpty(Mono.error(new RuntimeException("Driver not found")))
@@ -111,7 +110,6 @@ public class DriverService {
                 var scheduleFlux = scheduleService.getResourceSchedule(ResourceType.DRIVER, id).collectList();
                 var reviewsFlux = reviewService.getReviews(ResourceType.DRIVER, id).collectList();
 
-                // Récupération de l'organisation pour le flag isDriverBookingRequired
                 Mono<Boolean> orgRequirementMono = organizationRepository.findById(driver.getOrganizationId())
                         .map(org -> org.getIsDriverBookingRequired() != null ? org.getIsDriverBookingRequired() : false)
                         .defaultIfEmpty(false);
@@ -123,13 +121,24 @@ public class DriverService {
                         tuple.getT2(),
                         driver.getRating(),
                         tuple.getT3(),
-                        tuple.getT4() // isDriverBookingRequired
+                        tuple.getT4()
                     ));
             });
     }
 
     public Flux<DriverResponseDTO> getDriversByAgency(UUID agencyId) {
         return driverRepository.findAllByAgencyId(agencyId)
+                .map(driverMapper::toDto);
+    }
+
+    /**
+     * Récupère les chauffeurs disponibles pour une agence sur une plage horaire
+     */
+    public Flux<DriverResponseDTO> getAvailableDrivers(UUID agencyId, LocalDateTime startDate, LocalDateTime endDate) {
+        if (startDate.isAfter(endDate)) {
+            return Flux.error(new IllegalArgumentException("La date de début doit être avant la date de fin"));
+        }
+        return driverRepository.findAvailableDrivers(agencyId, startDate, endDate)
                 .map(driverMapper::toDto);
     }
 

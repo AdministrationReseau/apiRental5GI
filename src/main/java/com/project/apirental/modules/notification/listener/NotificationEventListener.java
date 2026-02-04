@@ -1,11 +1,8 @@
 package com.project.apirental.modules.notification.listener;
 
 import com.project.apirental.modules.notification.services.NotificationService;
-import com.project.apirental.shared.enums.NotificationReason;
-import com.project.apirental.shared.enums.NotificationResourceType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import reactor.core.scheduler.Schedulers;
 
@@ -13,7 +10,7 @@ import java.util.UUID;
 
 /**
  * Listener pour déclencher les notifications lors des événements de location.
- * 
+ *
  * À utiliser dans les services de location/réservation lors du :
  * - Créations de réservations
  * - Début de locations
@@ -28,7 +25,7 @@ public class NotificationEventListener {
 
     /**
      * Déclencher une notification de réservation pour un client
-     * 
+     *
      * Exemple d'utilisation :
      * applicationEventPublisher.publishEvent(
      *     new NotificationEvent("RESERVATION", resourceId, resourceType, locationId, vehicleId, driverId, details)

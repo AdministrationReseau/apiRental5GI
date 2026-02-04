@@ -1,13 +1,11 @@
 package com.project.apirental.modules.notification.services;
 
 import com.project.apirental.modules.notification.domain.NotificationEntity;
-import com.project.apirental.modules.notification.dto.NotificationCreateRequest;
 import com.project.apirental.modules.notification.dto.NotificationResponseDTO;
 import com.project.apirental.modules.notification.mapper.NotificationMapper;
 import com.project.apirental.modules.notification.repository.NotificationRepository;
 import com.project.apirental.modules.agency.repository.AgencyRepository;
 import com.project.apirental.shared.enums.NotificationReason;
-import com.project.apirental.shared.enums.NotificationResourceType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,7 +13,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 

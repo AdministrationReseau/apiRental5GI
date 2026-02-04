@@ -28,7 +28,7 @@ import io.r2dbc.postgresql.codec.Json;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
-// import org.springframework.context.annotation.Profile;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
@@ -41,7 +41,7 @@ import java.util.*;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-// @Profile("dev")
+@Profile("dev")
 public class DataSeeder implements CommandLineRunner {
 
     private final UserRepository userRepository;

@@ -93,19 +93,21 @@ public class DriverService {
                     });
             })
             .doOnSuccess(d -> eventPublisher.publishEvent(new AuditEvent("CREATE_DRIVER", "DRIVER", "Conducteur créé : " + d.getFirstname() + " " + d.getLastname())))
-            .map(driverMapper::toDto);
+            .flatMap(this::enrichDriver); // Enrichissement après création (prix null au début)
     }
 
     public Flux<DriverResponseDTO> getDriversByOrg(UUID orgId) {
         return driverRepository.findAllByOrganizationId(orgId)
-                .map(driverMapper::toDto);
+                .flatMap(this::enrichDriver);
     }
 
     public Mono<DriverDetailResponseDTO> getDriverDetails(UUID id) {
         return driverRepository.findById(Objects.requireNonNull(id))
             .switchIfEmpty(Mono.error(new RuntimeException("Driver not found")))
             .flatMap(driver -> {
-                var dto = driverMapper.toDto(driver);
+                // On récupère le DTO enrichi (avec prix)
+                Mono<DriverResponseDTO> dtoMono = enrichDriver(driver);
+
                 var pricingMono = pricingService.getPricing(ResourceType.DRIVER, id);
                 var scheduleFlux = scheduleService.getResourceSchedule(ResourceType.DRIVER, id).collectList();
                 var reviewsFlux = reviewService.getReviews(ResourceType.DRIVER, id).collectList();
@@ -114,37 +116,38 @@ public class DriverService {
                         .map(org -> org.getIsDriverBookingRequired() != null ? org.getIsDriverBookingRequired() : false)
                         .defaultIfEmpty(false);
 
-                return Mono.zip(pricingMono.defaultIfEmpty(new PricingEntity()), scheduleFlux, reviewsFlux, orgRequirementMono)
+                return Mono.zip(dtoMono, pricingMono.defaultIfEmpty(new PricingEntity()), scheduleFlux, reviewsFlux, orgRequirementMono)
                     .map(tuple -> new DriverDetailResponseDTO(
-                        dto,
-                        tuple.getT1().getId() == null ? null : tuple.getT1(),
-                        tuple.getT2(),
+                        tuple.getT1(), // DTO
+                        tuple.getT2().getId() == null ? null : tuple.getT2(), // Pricing Entity (redondant mais gardé pour structure detail)
+                        tuple.getT3(), // Schedule
                         driver.getRating(),
-                        tuple.getT3(),
-                        tuple.getT4()
+                        tuple.getT4(), // Reviews
+                        tuple.getT5()  // isDriverBookingRequired
                     ));
             });
     }
 
     public Flux<DriverResponseDTO> getDriversByAgency(UUID agencyId) {
         return driverRepository.findAllByAgencyId(agencyId)
-                .map(driverMapper::toDto);
+                .flatMap(this::enrichDriver);
     }
 
     /**
      * Récupère les chauffeurs disponibles pour une agence sur une plage horaire
+     * AVEC LEUR PRIX
      */
     public Flux<DriverResponseDTO> getAvailableDrivers(UUID agencyId, LocalDateTime startDate, LocalDateTime endDate) {
         if (startDate.isAfter(endDate)) {
             return Flux.error(new IllegalArgumentException("La date de début doit être avant la date de fin"));
         }
         return driverRepository.findAvailableDrivers(agencyId, startDate, endDate)
-                .map(driverMapper::toDto);
+                .flatMap(this::enrichDriver);
     }
 
     public Mono<DriverResponseDTO> getDriverById(UUID id) {
         return driverRepository.findById(Objects.requireNonNull(id))
-                .map(driverMapper::toDto)
+                .flatMap(this::enrichDriver)
                 .switchIfEmpty(Mono.error(new RuntimeException("Conducteur non trouvé")));
     }
 
@@ -164,7 +167,7 @@ public class DriverService {
                             .then(updateAgencyDriverStats(newAgencyId, 1))
                             .then(driverRepository.save(driver));
                 })
-                .map(driverMapper::toDto);
+                .flatMap(this::enrichDriver);
     }
 
     @Transactional
@@ -219,5 +222,12 @@ public class DriverService {
                     agency.setActiveDrivers(agency.getActiveDrivers() + increment);
                     return agencyRepository.save(agency);
                 }).then();
+    }
+
+    // --- METHODE PRIVEE POUR ENRICHIR LE DTO AVEC LE PRIX ---
+    private Mono<DriverResponseDTO> enrichDriver(DriverEntity driver) {
+        return pricingService.getPricing(ResourceType.DRIVER, driver.getId())
+                .defaultIfEmpty(new PricingEntity()) // Objet vide si pas de prix défini
+                .map(pricing -> driverMapper.toDto(driver, pricing));
     }
 }

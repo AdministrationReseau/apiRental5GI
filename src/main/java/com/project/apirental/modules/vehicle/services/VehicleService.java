@@ -7,6 +7,7 @@ import com.project.apirental.modules.organization.domain.OrganizationEntity;
 import com.project.apirental.modules.organization.repository.OrganizationRepository;
 import com.project.apirental.modules.organization.services.OrganizationService;
 import com.project.apirental.modules.subscription.repository.SubscriptionPlanRepository;
+import com.project.apirental.modules.vehicle.domain.VehicleCategoryEntity;
 import com.project.apirental.modules.vehicle.domain.VehicleEntity;
 import com.project.apirental.modules.vehicle.dto.VehicleRequestDTO;
 import com.project.apirental.modules.vehicle.dto.VehicleResponseDTO;
@@ -110,10 +111,8 @@ public class VehicleService {
                             }
 
                         }))
-                .flatMap(savedVehicle -> categoryRepository
-                        .findById(Objects.requireNonNull(savedVehicle.getCategoryId()))
-                        .map(cat -> vehicleMapper.toDto(savedVehicle, cat))
-                        .defaultIfEmpty(vehicleMapper.toDto(savedVehicle, null)))
+                // Modification ici : on utilise enrichVehicle pour récupérer la catégorie ET le prix (vide au début)
+                .flatMap(this::enrichVehicle)
                 .doOnSuccess(v -> eventPublisher.publishEvent(
                         new AuditEvent("CREATE_VEHICLE", "VEHICLE", "Véhicule ajouté : " + v.licencePlate())));
     }
@@ -127,32 +126,34 @@ public class VehicleService {
                 }).then();
     }
 
-    // --- METHODE MISE A JOUR : getVehicleDetails ---
     public Mono<VehicleDetailResponseDTO> getVehicleDetails(UUID id) {
         return vehicleRepository.findById(Objects.requireNonNull(id))
             .flatMap(vehicle -> {
                 // 1. Récupération des données liées
-                Mono<PricingEntity> pricingMono = pricingService.getPricing(ResourceType.VEHICLE, id);
                 var scheduleFlux = scheduleService.getResourceSchedule(ResourceType.VEHICLE, id).collectList();
                 var reviewsFlux = reviewService.getReviews(ResourceType.VEHICLE, id).collectList();
 
-                // 2. Récupération de l'organisation pour le flag isDriverBookingRequired
+                // 2. Récupération de l'organisation
                 Mono<Boolean> orgRequirementMono = organizationRepository.findById(vehicle.getOrganizationId())
                         .map(org -> org.getIsDriverBookingRequired() != null ? org.getIsDriverBookingRequired() : false)
                         .defaultIfEmpty(false);
 
+                // 3. Enrichissement (Récupère Catégorie + Prix)
                 Mono<VehicleResponseDTO> vehicleDtoMono = enrichVehicle(vehicle);
 
-                // 3. Assemblage
-                return Mono.zip(vehicleDtoMono, pricingMono.defaultIfEmpty(new PricingEntity()), scheduleFlux, reviewsFlux, orgRequirementMono)
-                    .map(tuple -> new VehicleDetailResponseDTO(
-                        tuple.getT1(), // VehicleDTO
-                        tuple.getT2().getId() == null ? null : tuple.getT2(), // Pricing
-                        tuple.getT3(), // Schedule
-                        vehicle.getRating(), // Rating
-                        tuple.getT4(), // Reviews
-                        tuple.getT5()  // isDriverBookingRequired (Boolean)
-                    ));
+                // 4. Assemblage
+                return Mono.zip(vehicleDtoMono, scheduleFlux, reviewsFlux, orgRequirementMono)
+                    .map(tuple -> {
+                        VehicleResponseDTO vDto = tuple.getT1();
+                        return new VehicleDetailResponseDTO(
+                            vDto,
+                            vDto.pricing(), // On réutilise le prix récupéré dans enrichVehicle
+                            tuple.getT2(), // Schedule
+                            vehicle.getRating(),
+                            tuple.getT3(), // Reviews
+                            tuple.getT4()  // isDriverBookingRequired
+                        );
+                    });
             });
     }
 
@@ -267,10 +268,17 @@ public class VehicleService {
                         .then(updateAgencyVehicleStats(v.getAgencyId(), -1)));
     }
 
+    // --- METHODE MISE A JOUR : enrichVehicle ---
+    // Récupère la catégorie ET le prix pour construire le DTO complet
     private Mono<VehicleResponseDTO> enrichVehicle(VehicleEntity vehicle) {
-        return categoryRepository.findById(Objects.requireNonNull(vehicle.getCategoryId()))
-                .map(cat -> vehicleMapper.toDto(vehicle, cat))
-                .defaultIfEmpty(vehicleMapper.toDto(vehicle, null));
+        Mono<VehicleCategoryEntity> categoryMono = categoryRepository.findById(Objects.requireNonNull(vehicle.getCategoryId()))
+                .defaultIfEmpty(VehicleCategoryEntity.builder().name("Unknown").build());
+
+        Mono<PricingEntity> pricingMono = pricingService.getPricing(ResourceType.VEHICLE, vehicle.getId())
+                .defaultIfEmpty(new PricingEntity()); // Retourne un objet vide si pas de prix
+
+        return Mono.zip(categoryMono, pricingMono)
+                .map(tuple -> vehicleMapper.toDto(vehicle, tuple.getT1(), tuple.getT2()));
     }
 
     public Flux<VehicleResponseDTO> getVehiclesByOrgAndCategory(UUID orgId, UUID categoryId) {

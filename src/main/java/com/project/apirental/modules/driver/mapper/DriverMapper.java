@@ -2,11 +2,12 @@ package com.project.apirental.modules.driver.mapper;
 
 import com.project.apirental.modules.driver.domain.DriverEntity;
 import com.project.apirental.modules.driver.dto.DriverResponseDTO;
+import com.project.apirental.modules.pricing.domain.PricingEntity;
 import org.springframework.stereotype.Component;
 
 @Component
 public class DriverMapper {
-    public DriverResponseDTO toDto(DriverEntity entity) {
+    public DriverResponseDTO toDto(DriverEntity entity, PricingEntity pricing) {
         if (entity == null) return null;
         return new DriverResponseDTO(
             entity.getId(),
@@ -22,7 +23,8 @@ public class DriverMapper {
             entity.getDrivingLicenseUrl(),
             entity.getStatus(),
             entity.getCreatedAt(),
-            entity.getUpdatedAt()
+            entity.getUpdatedAt(),
+            pricing
         );
     }
 }

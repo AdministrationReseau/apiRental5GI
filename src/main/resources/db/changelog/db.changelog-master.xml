@@ -622,4 +622,76 @@
         </addColumn>
 
     </changeSet>
+
+    <!-- 25: Création table notifications -->
+    <changeSet id="25-create-notifications" author="copilot">
+        <createTable tableName="notifications">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <!-- Référence à la location -->
+            <column name="location_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+
+            <!-- Ressource destinataire (client, chauffeur ou agence) -->
+            <column name="resource_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Type de ressource (CLIENT, DRIVER, AGENCY) -->
+            <column name="resource_type" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Motif de la notification (RESERVATION, LOCATION_START, LOCATION_END) -->
+            <column name="reason" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Véhicule impliqué (optionnel) -->
+            <column name="vehicle_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+
+            <!-- Chauffeur impliqué (optionnel) -->
+            <column name="driver_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+
+            <!-- Date/heure de création -->
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Statut de lecture -->
+            <column name="is_read" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Détails additionnels -->
+            <column name="details" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <!-- Index pour améliorer les performances -->
+        <createIndex tableName="notifications" indexName="idx_notifications_resource_id">
+            <column name="resource_id"/>
+        </createIndex>
+
+        <createIndex tableName="notifications" indexName="idx_notifications_location_id">
+            <column name="location_id"/>
+        </createIndex>
+
+        <createIndex tableName="notifications" indexName="idx_notifications_resource_id_unread">
+            <column name="resource_id"/>
+            <column name="is_read"/>
+        </createIndex>
+
+        <createIndex tableName="notifications" indexName="idx_notifications_created_at">
+            <column name="created_at"/>
+        </createIndex>
+    </changeSet>
 </databaseChangeLog>

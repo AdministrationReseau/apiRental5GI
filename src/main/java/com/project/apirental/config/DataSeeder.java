@@ -12,6 +12,8 @@ import com.project.apirental.modules.organization.domain.OrganizationEntity;
 import com.project.apirental.modules.organization.repository.OrganizationRepository;
 import com.project.apirental.modules.poste.domain.PosteEntity;
 import com.project.apirental.modules.poste.repository.PosteRepository;
+import com.project.apirental.modules.pricing.domain.PricingEntity;
+import com.project.apirental.modules.pricing.repository.PricingRepository;
 import com.project.apirental.modules.staff.repository.StaffRepository;
 import com.project.apirental.modules.subscription.domain.SubscriptionEntity;
 import com.project.apirental.modules.subscription.domain.SubscriptionPlanEntity;
@@ -21,23 +23,25 @@ import com.project.apirental.modules.vehicle.domain.VehicleCategoryEntity;
 import com.project.apirental.modules.vehicle.domain.VehicleEntity;
 import com.project.apirental.modules.vehicle.repository.CategoryRepository;
 import com.project.apirental.modules.vehicle.repository.VehicleRepository;
+import com.project.apirental.shared.enums.ResourceType;
 import io.r2dbc.postgresql.codec.Json;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.context.annotation.Profile;
+// import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
-@Profile("dev")
+// @Profile("dev")
 public class DataSeeder implements CommandLineRunner {
 
     private final UserRepository userRepository;
@@ -50,6 +54,7 @@ public class DataSeeder implements CommandLineRunner {
     private final DriverRepository driverRepository;
     private final CategoryRepository categoryRepository;
     private final StaffRepository staffRepository;
+    private final PricingRepository pricingRepository;
 
     private final PasswordEncoder passwordEncoder;
     private final ObjectMapper objectMapper;
@@ -135,14 +140,13 @@ public class DataSeeder implements CommandLineRunner {
                                     .then(seedPostes(savedOrg))
                                     .flatMap(postes ->
                                         seedAgenciesAndResources(savedOrg, plan, postes)
-                                        // CORRECTION ICI : On retourne l'objet UserEntity pour satisfaire le type du switchIfEmpty
                                         .thenReturn(savedOwner)
                                     );
                             });
                         });
                     })
             ))
-            .then(); // On convertit le résultat final (UserEntity ou Void) en Mono<Void> pour la méthode
+            .then();
     }
 
     private Mono<Map<String, PosteEntity>> seedPostes(OrganizationEntity org) {
@@ -278,7 +282,28 @@ public class DataSeeder implements CommandLineRunner {
                             .isNewRecord(true)
                             .build();
 
-                        return vehicleRepository.save(vehicle);
+                        // Sauvegarde du véhicule PUIS création du prix
+                        return vehicleRepository.save(vehicle)
+                            .flatMap(savedVehicle -> {
+                                double randomPrice = 15000 + (Math.random() * 35000);
+                                BigDecimal pricePerDay = BigDecimal.valueOf(Math.round(randomPrice / 100.0) * 100.0);
+                                BigDecimal pricePerHour = pricePerDay.divide(BigDecimal.valueOf(24), 2, java.math.RoundingMode.HALF_UP);
+
+                                PricingEntity pricing = PricingEntity.builder()
+                                    .id(UUID.randomUUID())
+                                    .organizationId(org.getId())
+                                    .resourceType(ResourceType.VEHICLE)
+                                    .resourceId(savedVehicle.getId())
+                                    .pricePerDay(pricePerDay)
+                                    .pricePerHour(pricePerHour)
+                                    .currency("XAF")
+                                    .createdAt(LocalDateTime.now())
+                                    .updatedAt(LocalDateTime.now())
+                                    .isNewRecord(true)
+                                    .build();
+
+                                return pricingRepository.save(pricing).thenReturn(savedVehicle);
+                            });
                     })
                     .count()
                     .map(Long::intValue);
@@ -306,7 +331,29 @@ public class DataSeeder implements CommandLineRunner {
                     .isNewRecord(true)
                     .build();
 
-                return driverRepository.save(driver);
+                // Sauvegarde du chauffeur PUIS création du prix
+                return driverRepository.save(driver)
+                    .flatMap(savedDriver -> {
+                        // Prix chauffeur : entre 5000 et 15000
+                        double randomPrice = 5000 + (Math.random() * 10000);
+                        BigDecimal pricePerDay = BigDecimal.valueOf(Math.round(randomPrice / 100.0) * 100.0);
+                        BigDecimal pricePerHour = pricePerDay.divide(BigDecimal.valueOf(10), 2, java.math.RoundingMode.HALF_UP); // Journée de 10h
+
+                        PricingEntity pricing = PricingEntity.builder()
+                            .id(UUID.randomUUID())
+                            .organizationId(org.getId())
+                            .resourceType(ResourceType.DRIVER)
+                            .resourceId(savedDriver.getId())
+                            .pricePerDay(pricePerDay)
+                            .pricePerHour(pricePerHour)
+                            .currency("XAF")
+                            .createdAt(LocalDateTime.now())
+                            .updatedAt(LocalDateTime.now())
+                            .isNewRecord(true)
+                            .build();
+
+                        return pricingRepository.save(pricing).thenReturn(savedDriver);
+                    });
             })
             .count()
             .map(Long::intValue);

@@ -1,6 +1,7 @@
 package com.project.apirental.modules.vehicle.mapper;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.project.apirental.modules.pricing.domain.PricingEntity;
 import com.project.apirental.modules.vehicle.domain.VehicleCategoryEntity;
 import com.project.apirental.modules.vehicle.domain.VehicleEntity;
 import com.project.apirental.modules.vehicle.dto.*;
@@ -13,27 +14,27 @@ public class VehicleMapper {
 
     private final ObjectMapper objectMapper;
 
-    public VehicleResponseDTO toDto(VehicleEntity entity, VehicleCategoryEntity category) {
+    public VehicleResponseDTO toDto(VehicleEntity entity, VehicleCategoryEntity category, PricingEntity pricing) {
         if (entity == null) return null;
 
         try {
             // Désérialisation des champs JSONB
-            FonctionnalitiesDTO functionalities = entity.getFunctionalities() != null ? 
+            FonctionnalitiesDTO functionalities = entity.getFunctionalities() != null ?
                 objectMapper.readValue(entity.getFunctionalities().asString(), FonctionnalitiesDTO.class) : null;
-            
-            EngineDTO engineDetails = entity.getEngineDetails() != null ? 
+
+            EngineDTO engineDetails = entity.getEngineDetails() != null ?
                 objectMapper.readValue(entity.getEngineDetails().asString(), EngineDTO.class) : null;
-            
-            FuelEfficiencyDTO fuelEfficiency = entity.getFuelEfficiency() != null ? 
+
+            FuelEfficiencyDTO fuelEfficiency = entity.getFuelEfficiency() != null ?
                 objectMapper.readValue(entity.getFuelEfficiency().asString(), FuelEfficiencyDTO.class) : null;
-            
-            InsuranceDTO insuranceDetails = entity.getInsuranceDetails() != null ? 
+
+            InsuranceDTO insuranceDetails = entity.getInsuranceDetails() != null ?
                 objectMapper.readValue(entity.getInsuranceDetails().asString(), InsuranceDTO.class) : null;
-            
-            String[] description = entity.getDescriptionList() != null ? 
+
+            String[] description = entity.getDescriptionList() != null ?
                 objectMapper.readValue(entity.getDescriptionList().asString(), String[].class) : new String[0];
-            
-            String[] images = entity.getImagesList() != null ? 
+
+            String[] images = entity.getImagesList() != null ?
                 objectMapper.readValue(entity.getImagesList().asString(), String[].class) : new String[0];
 
             return new VehicleResponseDTO(
@@ -55,7 +56,8 @@ public class VehicleMapper {
                 fuelEfficiency,
                 insuranceDetails,
                 description,
-                images
+                images,
+                pricing // Injection du prix
             );
         } catch (Exception e) {
             throw new RuntimeException("Erreur lors du mapping des données JSON du véhicule", e);

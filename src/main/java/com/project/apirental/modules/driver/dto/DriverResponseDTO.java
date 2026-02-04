@@ -1,5 +1,6 @@
 package com.project.apirental.modules.driver.dto;
 
+import com.project.apirental.modules.pricing.domain.PricingEntity;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -17,5 +18,6 @@ public record DriverResponseDTO(
     String drivingLicenseUrl,
     String status,
     LocalDateTime createdAt,
-    LocalDateTime updatedAt
+    LocalDateTime updatedAt,
+    PricingEntity pricing
 ) {}

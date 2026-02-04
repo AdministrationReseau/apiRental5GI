@@ -1,5 +1,6 @@
 package com.project.apirental.modules.vehicle.dto;
 
+import com.project.apirental.modules.pricing.domain.PricingEntity;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -17,18 +18,20 @@ public record VehicleResponseDTO(
     String statut,
     String color,
     String transmission,
-    
+
     // Équipements
     FonctionnalitiesDTO functionalities,
-    
+
     // Technique
     EngineDTO engineDetails,
     FuelEfficiencyDTO fuelEfficiency,
-    
-    
+
     // Assurance
     InsuranceDTO insuranceDetails,
-    
+
     String[] description,
-    String[] images
+    String[] images,
+
+    // PRIX
+    PricingEntity pricing
 ) {}

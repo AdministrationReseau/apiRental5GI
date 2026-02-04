@@ -1,7 +1,5 @@
 package com.project.apirental.modules.notification.domain;
 
-import com.project.apirental.shared.enums.NotificationReason;
-import com.project.apirental.shared.enums.NotificationResourceType;
 import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;

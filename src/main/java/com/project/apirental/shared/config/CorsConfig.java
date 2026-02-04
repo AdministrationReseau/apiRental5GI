@@ -21,7 +21,7 @@ public class CorsConfig {
                                                     "http://localhost:3003",
                                                     "https://pwa-easy-renta.vercel.app"));
         corsConfig.setMaxAge(3600L);
-        corsConfig.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        corsConfig.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         corsConfig.setAllowedHeaders(Arrays.asList("Content-Type", "Authorization", "x-requested-with"));
         corsConfig.setAllowCredentials(true);
 

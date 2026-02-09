@@ -26,7 +26,10 @@ public class OpenApiConfig {
     public GroupedOpenApi authApi() {
         return GroupedOpenApi.builder()
                 .group("1-authentification")
-                .pathsToMatch("/auth/**", "/api/media/**")
+                .pathsToMatch(
+                    "/auth/**",
+                    "/api/media/**",
+                    "/api/notifications/**")
                 .build();
     }
 
@@ -35,7 +38,10 @@ public class OpenApiConfig {
     public GroupedOpenApi clientApi() {
         return GroupedOpenApi.builder()
                 .group("2-client")
-                .pathsToMatch("/api/client/**")
+                .pathsToMatch(
+                    "/api/client/**",
+                    "/api/reviews/**",
+                    "/api/rentals/**")
                 .build();
     }
 
@@ -52,8 +58,7 @@ public class OpenApiConfig {
                     "/api/postes/**",
                     "/api/staff/**",
                     "/api/vehicles/**",
-                    "/api/drivers/**",
-                    "/api/notifications/**")
+                    "/api/drivers/**")
                 .build();
     }
 

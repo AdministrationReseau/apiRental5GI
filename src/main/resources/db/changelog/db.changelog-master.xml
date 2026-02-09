@@ -694,4 +694,84 @@
             <column name="created_at"/>
         </createIndex>
     </changeSet>
+
+    <!-- ChangeSet 26: Création des tables de Location et Paiement -->
+    <changeSet id="26-create-rentals-payments" author="brayanne">
+
+        <createTable tableName="rentals">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="client_id" type="UUID">
+                <constraints nullable="false"/> <!-- User ID du client -->
+            </column>
+            <column name="agency_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="vehicle_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="driver_id" type="UUID">
+                <constraints nullable="true"/> <!-- Peut être null si pas de chauffeur, mais ici obligatoire selon logique -->
+            </column>
+
+            <column name="start_date" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="end_date" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="status" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="rental_type" type="VARCHAR(20)"> <!-- DAILY, HOURLY -->
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Financier -->
+            <column name="total_amount" type="DECIMAL(19,2)"/>
+            <column name="amount_paid" type="DECIMAL(19,2)" defaultValueNumeric="0"/>
+            <column name="commission_amount" type="DECIMAL(19,2)"/>
+            <column name="deposit_amount" type="DECIMAL(19,2)"/>
+
+            <column name="client_phone" type="VARCHAR(50)"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="NOW()"/>
+            <column name="updated_at" type="TIMESTAMP"/>
+        </createTable>
+
+        <createTable tableName="payments">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="rental_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_payment_rental" referencedTableName="rentals" referencedColumnNames="id"/>
+            </column>
+            <column name="amount" type="DECIMAL(19,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="payment_method" type="VARCHAR(50)"> <!-- MOMO, OM, CARD, CASH -->
+                <constraints nullable="false"/>
+            </column>
+            <column name="transaction_date" type="TIMESTAMP" defaultValueComputed="NOW()"/>
+            <column name="transaction_ref" type="VARCHAR(100)"/>
+        </createTable>
+
+        <createIndex tableName="rentals" indexName="idx_rentals_agency">
+            <column name="agency_id"/>
+        </createIndex>
+        <createIndex tableName="rentals" indexName="idx_rentals_client">
+            <column name="client_id"/>
+        </createIndex>
+        <createIndex tableName="rentals" indexName="idx_rentals_status">
+            <column name="status"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="27-update-rentals-for-walkin" author="brayanne">
+        <addColumn tableName="rentals">
+            <column name="client_name" type="VARCHAR(255)"/>
+        </addColumn>
+        <dropNotNullConstraint tableName="rentals" columnName="client_id" columnDataType="UUID"/>
+    </changeSet>
 </databaseChangeLog>

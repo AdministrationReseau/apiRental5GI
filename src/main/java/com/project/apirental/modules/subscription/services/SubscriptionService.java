@@ -8,7 +8,6 @@ import com.project.apirental.modules.subscription.repository.SubscriptionReposit
 import com.project.apirental.shared.events.AuditEvent;
 import com.project.apirental.modules.organization.domain.OrganizationEntity;
 import com.project.apirental.modules.organization.repository.OrganizationRepository;
-// import com.project.apirental.shared.events.AuditEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -28,7 +27,7 @@ public class SubscriptionService {
         private final SubscriptionPlanRepository planRepository;
         private final SubscriptionRepository subscriptionRepository; // FIX : Utiliser le bon type ici
         private final OrganizationRepository organizationRepository;
-        private final PaymentService paymentService;
+        private final SubscriptionPaymentService paymentService;
         private final ApplicationEventPublisher eventPublisher;
 
         @Transactional

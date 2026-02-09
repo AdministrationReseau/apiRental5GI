@@ -23,12 +23,23 @@ public class SecurityConfig {
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(exchanges -> exchanges
                         .pathMatchers("/auth/**", "/swagger-ui.html", "/webjars/**", "/v3/api-docs/**").permitAll()
-                        .pathMatchers("/api/subscriptions/plans/**").permitAll()
                         .pathMatchers(HttpMethod.PUT, "/api/subscriptions/plans/**").hasRole("ADMIN")
                         // Endpoints publics supplémentaires demandés :
-                        .pathMatchers("/api/vehicles/available", "/api/vehicles/categories/all", "/api/agencies/all", "/api/org/all", "/api/drivers/{id}/details", "/api/vehicles/{id}/details", "/api/vehicles/drivers/available").permitAll()
-                        .pathMatchers("/api/org/**").hasRole("ORGANIZATION")
-                        .pathMatchers("/uploads/**").permitAll()
+                        .pathMatchers(
+                            "/api/vehicles/available",
+                            "/uploads/**",
+                            "/api/subscriptions/plans/**",
+                            "/api/vehicles/categories/all",
+                            "/api/agencies/all",
+                            "/api/org/all",
+                            "/api/drivers/{id}/details",
+                            "/api/vehicles/{id}/details",
+                            "/api/vehicles/drivers/available",
+                            "/api/reviews/**",
+                            "/api/rentals/**",
+                            "/api/notifications/**")
+                        .permitAll()
+                        .pathMatchers("/api/org/**", "/api/stats/**").hasRole("ORGANIZATION")
                         .anyExchange().authenticated()
                 )
                 .exceptionHandling(exceptionHandlingSpec -> exceptionHandlingSpec

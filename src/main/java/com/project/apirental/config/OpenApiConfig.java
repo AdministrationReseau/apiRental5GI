@@ -58,7 +58,8 @@ public class OpenApiConfig {
                     "/api/postes/**",
                     "/api/staff/**",
                     "/api/vehicles/**",
-                    "/api/drivers/**")
+                    "/api/drivers/**",
+                    "/api/stats/**")
                 .build();
     }
 

@@ -39,7 +39,7 @@ public class SecurityConfig {
                             "/api/rentals/**",
                             "/api/notifications/**")
                         .permitAll()
-                        .pathMatchers("/api/org/**", "/api/stats/**").hasRole("ORGANIZATION")
+                        .pathMatchers("/api/org/**").hasRole("ORGANIZATION")
                         .anyExchange().authenticated()
                 )
                 .exceptionHandling(exceptionHandlingSpec -> exceptionHandlingSpec

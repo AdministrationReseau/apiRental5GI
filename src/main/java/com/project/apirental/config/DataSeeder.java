@@ -29,6 +29,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
@@ -41,7 +42,7 @@ import java.util.*;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-@Profile("dev")
+@Profile("dev") // S'exécute uniquement avec le profil 'dev'
 public class DataSeeder implements CommandLineRunner {
 
     private final UserRepository userRepository;
@@ -61,40 +62,65 @@ public class DataSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        log.info("🌱 Démarrage du Seeder de données complet...");
+        log.info("🌱 Démarrage du Seeder de données (Mode Robuste)…");
 
-        seedOrganizations()
+        // suppression des données précédentes (tables concernées),
+        // poste/permission/plan restent en place
+        cleanDatabase()
+            .doOnTerminate(() -> log.info("🧹 Nettoyage initial terminé"))
+            .then(seedOrganizations())
             .doOnError(error -> log.error("❌ Erreur critique lors du seeding : ", error))
             .doOnTerminate(() -> log.info("🏁 Processus de seeding terminé."))
             .subscribe();
     }
 
+    /**
+     * Vide les tables susceptibles d'avoir été créées par un précédent lancement.
+     * Ne touche pas aux tables postes, permissions, plans : elles sont réutilisées
+     * par le seeder.
+     */
+    private Mono<Void> cleanDatabase() {
+        log.info("🧹 Purge des données existantes (excepté postes / permissions) …");
+        return pricingRepository.deleteAll()
+            .then(driverRepository.deleteAll())
+            .then(vehicleRepository.deleteAll())
+            .then(agencyRepository.deleteAll())
+            .then(staffRepository.deleteAll())
+            .then(userRepository.deleteAll())
+            .then(organizationRepository.deleteAll());
+    }
+
     private Mono<Void> seedOrganizations() {
-        return createFullOrganization("org.free1@demo.com", "Free Corp 1", "FREE")
-            .then(createFullOrganization("org.free2@demo.com", "Free Corp 2", "FREE"))
-            .then(createFullOrganization("org.pro1@demo.com", "Pro Solutions 1", "PRO"))
-            .then(createFullOrganization("org.pro2@demo.com", "Pro Solutions 2", "PRO"));
+        // Création de 2 organisations réalistes
+        return createFullOrganization("contact@prestige-auto.cm", "Prestige Auto Cameroun", "ENTERPRISE_YEARLY")
+            .then(createFullOrganization("info@logistics-express.cm", "Logistics Express", "PRO"));
     }
 
     private Mono<Void> createFullOrganization(String email, String orgName, String planName) {
+        // 1. Vérifier si le propriétaire existe déjà
         return userRepository.findByEmail(email)
             .flatMap(existing -> {
-                log.info("⚠️ L'organisation {} existe déjà.", orgName);
-                return Mono.just(existing);
+                log.info("⚠️ L'utilisateur {} existe déjà. Vérification de l'organisation...", email);
+                // Si l'user existe, on cherche son organisation pour continuer le seeding (véhicules, etc.)
+                return organizationRepository.findByOwnerId(existing.getId())
+                        .flatMap(org -> seedPostes(org)
+                                .flatMap(postes -> seedAgenciesAndResources(org, null, postes)))
+                        .then();
             })
             .switchIfEmpty(Mono.defer(() ->
                 planRepository.findByName(planName)
-                    .switchIfEmpty(Mono.error(new RuntimeException("Plan " + planName + " introuvable")))
+                    .switchIfEmpty(Mono.error(new RuntimeException("Plan " + planName + " introuvable.")))
                     .flatMap(plan -> {
                         log.info("🏗️ Création de l'organisation : {} (Plan: {})", orgName, planName);
 
+                        // Création du Propriétaire
                         UserEntity owner = UserEntity.builder()
                             .id(UUID.randomUUID())
-                            .firstname("Admin")
-                            .lastname(orgName)
-                            .fullname("Admin " + orgName)
+                            .firstname("PDG")
+                            .lastname(orgName.split(" ")[0])
+                            .fullname("PDG " + orgName)
                             .email(email)
-                            .password(passwordEncoder.encode("pass1234"))
+                            .password(passwordEncoder.encode("password123"))
                             .role("ORGANIZATION")
                             .status("ACTIVE")
                             .isNewRecord(true)
@@ -102,26 +128,31 @@ public class DataSeeder implements CommandLineRunner {
 
                         return userRepository.save(owner).flatMap(savedOwner -> {
                             savedOwner.setNewRecord(false);
+                            LocalDateTime expiresAt = (plan.getDurationDays() > 0) ? LocalDateTime.now().plusDays(plan.getDurationDays()) : null;
 
-                            LocalDateTime expiresAt = (plan.getDurationDays() > 0)
-                                ? LocalDateTime.now().plusDays(plan.getDurationDays()) : null;
-
+                            // Création de l'Organisation
                             OrganizationEntity org = OrganizationEntity.builder()
                                 .id(UUID.randomUUID())
                                 .name(orgName)
-                                .description("Organisation de démonstration")
+                                .description("Leader de la location de véhicules au Cameroun. Service premium.")
                                 .ownerId(savedOwner.getId())
                                 .email(email)
-                                .phone("+237600000000")
-                                .address("Quartier Général")
+                                .phone("+237 699 00 00 00")
+                                .address("Boulevard de la Liberté, Akwa")
                                 .city("Douala")
                                 .country("CM")
+                                .region("Littoral")
+                                .postalCode("BP 1234")
+                                .website("https://www." + orgName.toLowerCase().replaceAll(" ", "") + ".cm")
+                                .timezone("Africa/Douala")
                                 .subscriptionPlanId(plan.getId())
                                 .subscriptionExpiresAt(expiresAt)
                                 .isVerified(true)
-                                .logoUrl("https://placehold.co/200x200/png?text=Logo+" + orgName.replaceAll(" ", "+"))
-                                .registrationNumber("REG-" + System.currentTimeMillis())
-                                .taxNumber("TAX-" + System.currentTimeMillis())
+                                .verificationDate(LocalDateTime.now())
+                                .logoUrl("https://ui-avatars.com/api/?name=" + orgName.replaceAll(" ", "+") + "&background=0D8ABC&color=fff&size=200")
+                                .registrationNumber("RC/DLA/2024/B/" + System.currentTimeMillis())
+                                .taxNumber("M0123456789" + System.currentTimeMillis())
+                                .isDriverBookingRequired(false)
                                 .isNewRecord(true)
                                 .build();
 
@@ -145,199 +176,264 @@ public class DataSeeder implements CommandLineRunner {
                             });
                         });
                     })
+                    .then() // <-- conversion en Mono<Void> pour satisfaire switchIfEmpty
             ))
             .then();
     }
 
     private Mono<Map<String, PosteEntity>> seedPostes(OrganizationEntity org) {
-        PosteEntity managerPoste = PosteEntity.builder().id(UUID.randomUUID()).organizationId(org.getId()).name("Manager").description("Gestionnaire d'agence").isNewRecord(true).build();
-        PosteEntity agentPoste = PosteEntity.builder().id(UUID.randomUUID()).organizationId(org.getId()).name("Agent").description("Agent de comptoir").isNewRecord(true).build();
-        PosteEntity mecanoPoste = PosteEntity.builder().id(UUID.randomUUID()).organizationId(org.getId()).name("Mécanicien").description("Maintenance").isNewRecord(true).build();
+        // On récupère les postes existants ou on les crée
+        return posteRepository.findAllByOrganizationIdOrSystem(org.getId())
+            .collectMap(PosteEntity::getName)
+            .flatMap(existingPostes -> {
+                List<Mono<PosteEntity>> toCreate = new ArrayList<>();
 
-        return Flux.just(managerPoste, agentPoste, mecanoPoste)
-            .flatMap(posteRepository::save)
-            .collectMap(PosteEntity::getName);
+                if (!existingPostes.containsKey("Manager Agence")) {
+                    toCreate.add(posteRepository.save(PosteEntity.builder().id(UUID.randomUUID()).organizationId(org.getId()).name("Manager Agence").description("Responsable opérationnel").isNewRecord(true).build()));
+                }
+                if (!existingPostes.containsKey("Agent Commercial")) {
+                    toCreate.add(posteRepository.save(PosteEntity.builder().id(UUID.randomUUID()).organizationId(org.getId()).name("Agent Commercial").description("Gestion clientèle").isNewRecord(true).build()));
+                }
+                if (!existingPostes.containsKey("Chef de Parc")) {
+                    toCreate.add(posteRepository.save(PosteEntity.builder().id(UUID.randomUUID()).organizationId(org.getId()).name("Chef de Parc").description("Maintenance flotte").isNewRecord(true).build()));
+                }
+
+                return Flux.concat(toCreate)
+                    .then(posteRepository.findAllByOrganizationIdOrSystem(org.getId()).collectMap(PosteEntity::getName));
+            });
     }
 
     private Mono<Void> seedAgenciesAndResources(OrganizationEntity org, SubscriptionPlanEntity plan, Map<String, PosteEntity> postes) {
-        int agencyCount = "FREE".equals(plan.getName()) ? 1 : 3;
+        return Flux.just("Douala - Bonanjo", "Yaoundé - Bastos")
+            .flatMap(agencyName -> {
+                String city = agencyName.split(" - ")[0];
+                String email = "agence." + city.toLowerCase() + "@" + org.getName().toLowerCase().replaceAll(" ", "") + ".cm";
 
-        int vehiclesPerAgency = Math.max(1, plan.getMaxVehicles() / agencyCount);
-        int driversPerAgency = Math.max(1, plan.getMaxDrivers() / agencyCount);
-        int staffPerAgency = "FREE".equals(plan.getName()) ? 2 : 5;
+                // Vérification existence Agence par Email (pour éviter doublons)
+                return agencyRepository.findAllByOrganizationId(org.getId())
+                    .filter(a -> a.getEmail().equals(email))
+                    .next()
+                    .switchIfEmpty(Mono.defer(() -> {
+                        // Création Agence si n'existe pas
+                        AgencyEntity agency = AgencyEntity.builder()
+                            .id(UUID.randomUUID())
+                            .organizationId(org.getId())
+                            .name(org.getName() + " - " + agencyName)
+                            .description("Agence principale de " + city)
+                            .address(city.equals("Douala") ? "Rue Joss, Bonanjo" : "Avenue des Banques, Bastos")
+                            .city(city)
+                            .country("CM")
+                            .region(city.equals("Douala") ? "Littoral" : "Centre")
+                            .email(email)
+                            .phone("+237 677 55 00 " + (city.equals("Douala") ? "01" : "02"))
+                            .is24Hours(true)
+                            .latitude(city.equals("Douala") ? 4.0511 : 3.8480)
+                            .longitude(city.equals("Douala") ? 9.7679 : 11.5021)
+                            .geofenceRadius(1000.0)
+                            .logoUrl("https://ui-avatars.com/api/?name=" + city + "&background=random")
+                            .primaryColor("#1e40af")
+                            .secondaryColor("#fbbf24")
+                            .workingHours("Lundi-Dimanche: 08h-20h")
+                            .allowOnlineBooking(true)
+                            .depositPercentage(10.0)
+                            .isNewRecord(true)
+                            .build();
+                        return agencyRepository.save(agency);
+                    }))
+                    .flatMap(savedAgency -> {
+                        savedAgency.setNewRecord(false);
 
-        return Flux.range(1, agencyCount)
-            .flatMap(i -> {
-                String agencyName = org.getName() + " - Agence " + i;
-
-                AgencyEntity agency = AgencyEntity.builder()
-                    .id(UUID.randomUUID())
-                    .organizationId(org.getId())
-                    .name(agencyName)
-                    .address("Adresse Agence " + i)
-                    .city("Douala")
-                    .email("agence" + i + "." + org.getId().toString().substring(0,4) + "@demo.com")
-                    .phone("69900000" + i)
-                    .is24Hours(true)
-                    .logoUrl("https://placehold.co/150x150?text=Agence+" + i)
-                    .isNewRecord(true)
-                    .build();
-
-                return agencyRepository.save(agency).flatMap(savedAgency -> {
-                    savedAgency.setNewRecord(false);
-
-                    return seedStaff(org, savedAgency, staffPerAgency, postes)
-                        .flatMap(managerId -> {
-                            savedAgency.setManagerId(managerId);
-                            savedAgency.setTotalPersonnel(staffPerAgency);
-                            return agencyRepository.save(savedAgency);
-                        })
-                        .then(seedVehicles(org, savedAgency, vehiclesPerAgency))
-                        .flatMap(vehicleCount -> {
-                            savedAgency.setTotalVehicles(vehicleCount);
-                            savedAgency.setActiveVehicles(vehicleCount);
-                            return agencyRepository.save(savedAgency);
-                        })
-                        .then(seedDrivers(org, savedAgency, driversPerAgency))
-                        .flatMap(driverCount -> {
-                            savedAgency.setTotalDrivers(driverCount);
-                            savedAgency.setActiveDrivers(driverCount);
-                            return agencyRepository.save(savedAgency);
-                        });
-                });
+                        // Création du Staff (Idempotent)
+                        return seedStaff(org, savedAgency, 3, postes)
+                            .flatMap(managerId -> {
+                                savedAgency.setManagerId(managerId);
+                                savedAgency.setTotalPersonnel(3);
+                                return agencyRepository.save(savedAgency);
+                            })
+                            // Création des Véhicules (Idempotent)
+                            .then(seedRealVehicles(org, savedAgency))
+                            .flatMap(vehicleCount -> {
+                                savedAgency.setTotalVehicles(vehicleCount);
+                                savedAgency.setActiveVehicles(vehicleCount);
+                                return agencyRepository.save(savedAgency);
+                            })
+                            // Création des Chauffeurs (Idempotent)
+                            .then(seedDrivers(org, savedAgency, 4))
+                            .flatMap(driverCount -> {
+                                savedAgency.setTotalDrivers(driverCount);
+                                savedAgency.setActiveDrivers(driverCount);
+                                return agencyRepository.save(savedAgency);
+                            });
+                    });
             })
-            .then(updateOrganizationCounters(org.getId(), agencyCount, plan));
+            .then(updateOrganizationCounters(org.getId()));
     }
 
     private Mono<UUID> seedStaff(OrganizationEntity org, AgencyEntity agency, int count, Map<String, PosteEntity> postes) {
         return Flux.range(1, count)
             .flatMap(i -> {
                 boolean isManager = (i == 1);
-                String roleName = isManager ? "Manager" : (i % 2 == 0 ? "Agent" : "Mécanicien");
-                PosteEntity poste = postes.getOrDefault(roleName, postes.get("Agent"));
+                String roleName = isManager ? "Manager Agence" : "Agent Commercial";
+                PosteEntity poste = postes.getOrDefault(roleName, postes.values().iterator().next());
 
-                String email = "staff." + agency.getId().toString().substring(0,4) + "." + i + "@demo.com";
+                String email = "staff." + i + "." + agency.getCity().toLowerCase() + "@demo.com";
 
-                UserEntity staff = UserEntity.builder()
-                    .id(UUID.randomUUID())
-                    .organizationId(org.getId())
-                    .agencyId(agency.getId())
-                    .posteId(poste.getId())
-                    .firstname(isManager ? "Manager" : "Employé")
-                    .lastname(agency.getName() + " " + i)
-                    .fullname((isManager ? "Manager " : "Employé ") + i)
-                    .email(email)
-                    .password(passwordEncoder.encode("pass1234"))
-                    .role("STAFF")
-                    .status("ACTIVE")
-                    .hiredAt(LocalDateTime.now())
-                    .isNewRecord(true)
-                    .build();
-
-                return userRepository.save(staff);
-            })
-            .collectList()
-            .map(list -> list.get(0).getId());
-    }
-
-    private Mono<Integer> seedVehicles(OrganizationEntity org, AgencyEntity agency, int count) {
-        return categoryRepository.findAllByOrganizationIdOrSystem(org.getId())
-            .next()
-            .switchIfEmpty(Mono.defer(() -> {
-                VehicleCategoryEntity defaultCat = VehicleCategoryEntity.builder()
-                    .id(UUID.randomUUID())
-                    .organizationId(org.getId())
-                    .name("Default Category " + UUID.randomUUID().toString().substring(0, 5))
-                    .description("Created by Seeder")
-                    .isNewRecord(true)
-                    .build();
-                return categoryRepository.save(defaultCat);
-            }))
-            .flatMap(category -> {
-                return Flux.range(1, count)
-                    .flatMap(i -> {
-                        String plate = "LT-" + org.getName().substring(0,2).toUpperCase() + "-" + agency.getId().toString().substring(0,2) + i;
-
-                        VehicleEntity vehicle = VehicleEntity.builder()
+                // VÉRIFICATION CRUCIALE : On vérifie si l'email existe avant de créer
+                return userRepository.findByEmail(email)
+                    .map(UserEntity::getId) // Si existe, on retourne son ID
+                    .switchIfEmpty(Mono.defer(() -> {
+                        // Si n'existe pas, on crée
+                        UserEntity staff = UserEntity.builder()
                             .id(UUID.randomUUID())
                             .organizationId(org.getId())
                             .agencyId(agency.getId())
-                            .categoryId(category.getId())
-                            .licencePlate(plate)
-                            .brand(i % 2 == 0 ? "Toyota" : "Hyundai")
-                            .model(i % 2 == 0 ? "Corolla" : "Tucson")
-                            .yearProduction(LocalDateTime.now().minusYears(i))
-                            .places(5)
-                            .kilometrage(10000.0 * i)
-                            .statut("AVAILABLE")
-                            .transmission("AUTOMATIC")
-                            .color("White")
-                            .imagesList(createJson(new String[]{"https://placehold.co/600x400?text=Voiture+" + plate}))
-                            .descriptionList(createJson(new String[]{"Climatisation", "Bluetooth", "GPS"}))
-                            .functionalities(createJson(Map.of("gps", true, "ac", true)))
-                            .engineDetails(createJson(Map.of("type", "V4", "horsepower", 120)))
-                            .fuelEfficiency(createJson(Map.of("city", "8L/100", "highway", "6L/100")))
-                            .insuranceDetails(createJson(Map.of("provider", "AXA", "expiry", "2026-01-01")))
-                            .createdAt(LocalDateTime.now())
+                            .posteId(poste.getId())
+                            .firstname(isManager ? "Jean" : "Paul")
+                            .lastname(isManager ? "Manager" : "Employé " + i)
+                            .fullname((isManager ? "Jean Manager" : "Paul Employé " + i))
+                            .email(email)
+                            .password(passwordEncoder.encode("password123"))
+                            .role("STAFF")
+                            .status("ACTIVE")
+                            .hiredAt(LocalDateTime.now().minusMonths(i))
                             .isNewRecord(true)
                             .build();
+                        return userRepository.save(staff).map(UserEntity::getId);
+                    }));
+            })
+            .collectList()
+            .map(list -> list.isEmpty() ? null : list.get(0)); // Retourne l'ID du premier (Manager)
+    }
 
-                        // Sauvegarde du véhicule PUIS création du prix
-                        return vehicleRepository.save(vehicle)
-                            .flatMap(savedVehicle -> {
-                                double randomPrice = 15000 + (Math.random() * 35000);
-                                BigDecimal pricePerDay = BigDecimal.valueOf(Math.round(randomPrice / 100.0) * 100.0);
-                                BigDecimal pricePerHour = pricePerDay.divide(BigDecimal.valueOf(24), 2, java.math.RoundingMode.HALF_UP);
+    private Mono<Integer> seedRealVehicles(OrganizationEntity org, AgencyEntity agency) {
+        return categoryRepository.findAll()
+            .collectMap(VehicleCategoryEntity::getName)
+            .flatMap(categories -> {
+                List<Mono<VehicleEntity>> vehiclesToCreate = new ArrayList<>();
 
-                                PricingEntity pricing = PricingEntity.builder()
-                                    .id(UUID.randomUUID())
-                                    .organizationId(org.getId())
-                                    .resourceType(ResourceType.VEHICLE)
-                                    .resourceId(savedVehicle.getId())
-                                    .pricePerDay(pricePerDay)
-                                    .pricePerHour(pricePerHour)
-                                    .currency("XAF")
-                                    .createdAt(LocalDateTime.now())
-                                    .updatedAt(LocalDateTime.now())
-                                    .isNewRecord(true)
-                                    .build();
+                // 1. Toyota Corolla
+                vehiclesToCreate.add(createVehicleSafe(org, agency, categories.get("Berline (Sedan)"),
+                    "Toyota", "Corolla LE", "LT-123-AB", 2021, 5, 45000.0, "AUTOMATIC", "Blanc", "Essence",
+                    new String[]{"https://images.unsplash.com/photo-1621007947382-bb3c3968e3bb?w=800", "https://images.unsplash.com/photo-1590362835106-1f209f957687?w=800"},
+                    35000.0));
 
-                                return pricingRepository.save(pricing).thenReturn(savedVehicle);
-                            });
-                    })
-                    .count()
-                    .map(Long::intValue);
+                // 2. Toyota Prado
+                vehiclesToCreate.add(createVehicleSafe(org, agency, categories.get("SUV (4x4)"),
+                    "Toyota", "Land Cruiser Prado", "LT-888-CA", 2022, 7, 25000.0, "AUTOMATIC", "Noir", "Diesel",
+                    new String[]{"https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=800", "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=800"},
+                    75000.0));
+
+                // 3. Mercedes C-Class
+                vehiclesToCreate.add(createVehicleSafe(org, agency, categories.get("Luxe (Luxury)"),
+                    "Mercedes-Benz", "Classe C 300", "LT-001-ZZ", 2023, 5, 10000.0, "AUTOMATIC", "Gris Argent", "Essence",
+                    new String[]{"https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=800", "https://images.unsplash.com/photo-1563720223185-11003d516935?w=800"},
+                    120000.0));
+
+                return Flux.concat(vehiclesToCreate).count().map(Long::intValue);
             });
     }
 
-    private Mono<Integer> seedDrivers(OrganizationEntity org, AgencyEntity agency, int count) {
-        return Flux.range(1, count)
-            .flatMap(i -> {
-                DriverEntity driver = DriverEntity.builder()
+    private Mono<VehicleEntity> createVehicleSafe(
+            OrganizationEntity org, AgencyEntity agency, VehicleCategoryEntity category,
+            String brand, String model, String plateBase, int year, int places, double km,
+            String transmission, String color, String fuel, String[] images, double dailyPrice) {
+
+        if (category == null) return Mono.empty();
+
+        // On utilise la plaque de base pour vérifier l'unicité (pour éviter de recréer la même voiture)
+        // Note: Dans un vrai projet, il faudrait une méthode findByLicencePlate dans le repo.
+        // Ici, on utilise onErrorResume pour attraper l'erreur de duplication si la plaque existe.
+
+        String uniquePlate = plateBase + "-" + agency.getCity().substring(0, 3).toUpperCase();
+
+        VehicleEntity vehicle = VehicleEntity.builder()
+            .id(UUID.randomUUID())
+            .organizationId(org.getId())
+            .agencyId(agency.getId())
+            .categoryId(category.getId())
+            .licencePlate(uniquePlate)
+            .vinNumber(UUID.randomUUID().toString().replace("-", "").toUpperCase().substring(0, 17))
+            .brand(brand)
+            .model(model)
+            .yearProduction(LocalDateTime.of(year, 1, 1, 0, 0))
+            .places(places)
+            .kilometrage(km)
+            .statut("AVAILABLE")
+            .transmission(transmission)
+            .color(color)
+            .imagesList(createJson(images))
+            .descriptionList(createJson(new String[]{"Climatisation", "Bluetooth", "GPS", "Sièges Cuir"}))
+            .functionalities(createJson(Map.of("gps", true, "ac", true, "bluetooth", true)))
+            .engineDetails(createJson(Map.of("type", fuel, "horsepower", 150)))
+            .fuelEfficiency(createJson(Map.of("city", "10L/100km", "highway", "7L/100km")))
+            .insuranceDetails(createJson(Map.of("provider", "AXA", "expiry", "2026-12-31")))
+            .rating(4.5)
+            .createdAt(LocalDateTime.now())
+            .isNewRecord(true)
+            .build();
+
+        return vehicleRepository.save(vehicle)
+            .flatMap(savedVehicle -> {
+                // Création du prix
+                BigDecimal pricePerDay = BigDecimal.valueOf(dailyPrice);
+                BigDecimal pricePerHour = pricePerDay.divide(BigDecimal.valueOf(24), 2, java.math.RoundingMode.HALF_UP);
+
+                PricingEntity pricing = PricingEntity.builder()
                     .id(UUID.randomUUID())
                     .organizationId(org.getId())
-                    .agencyId(agency.getId())
-                    .firstname("Chauffeur")
-                    .lastname(agency.getName() + " " + i)
-                    .tel("+2376900000" + i)
-                    .age(25 + i)
-                    .gender(0)
-                    .profilUrl("https://placehold.co/150x150?text=Profil+" + i)
-                    .cniUrl("https://placehold.co/400x300?text=CNI+" + i)
-                    .drivingLicenseUrl("https://placehold.co/400x300?text=Permis+" + i)
-                    .status("ACTIVE")
+                    .resourceType(ResourceType.VEHICLE)
+                    .resourceId(savedVehicle.getId())
+                    .pricePerDay(pricePerDay)
+                    .pricePerHour(pricePerHour)
+                    .currency("XAF")
                     .createdAt(LocalDateTime.now())
                     .updatedAt(LocalDateTime.now())
                     .isNewRecord(true)
                     .build();
 
-                // Sauvegarde du chauffeur PUIS création du prix
+                return pricingRepository.save(pricing).thenReturn(savedVehicle);
+            })
+            // C'EST ICI QUE LA MAGIE OPÈRE : Si erreur de duplication, on ignore silencieusement
+            .onErrorResume(DuplicateKeyException.class, e -> {
+                log.info("🚗 Véhicule {} existe déjà. Ignoré.", uniquePlate);
+                return Mono.empty();
+            });
+    }
+
+    private Mono<Integer> seedDrivers(OrganizationEntity org, AgencyEntity agency, int count) {
+        String[] firstnames = {"Jean", "Pierre", "Michel", "Alain", "Thierry", "Franck"};
+        String[] lastnames = {"Mbarga", "Kamga", "Nguema", "Abessolo", "Tchakounte", "Eto'o"};
+
+        return Flux.range(1, count)
+            .flatMap(i -> {
+                String fname = firstnames[i % firstnames.length];
+                String lname = lastnames[i % lastnames.length];
+                String phone = "+237 6" + (90000000 + i) + agency.getCity().length(); // Rendre unique par agence
+
+                // Vérification basique (on pourrait vérifier par tel, mais ici on try/catch)
+                DriverEntity driver = DriverEntity.builder()
+                    .id(UUID.randomUUID())
+                    .organizationId(org.getId())
+                    .agencyId(agency.getId())
+                    .firstname(fname)
+                    .lastname(lname)
+                    .tel(phone)
+                    .age(28 + i)
+                    .gender(0)
+                    .profilUrl("https://ui-avatars.com/api/?name=" + fname + "+" + lname + "&background=random&size=200")
+                    .cniUrl("https://placehold.co/600x400?text=CNI+" + lname)
+                    .drivingLicenseUrl("https://placehold.co/600x400?text=Permis+" + lname)
+                    .status("ACTIVE")
+                    .rating(4.8)
+                    .createdAt(LocalDateTime.now())
+                    .updatedAt(LocalDateTime.now())
+                    .isNewRecord(true)
+                    .build();
+
                 return driverRepository.save(driver)
                     .flatMap(savedDriver -> {
-                        // Prix chauffeur : entre 5000 et 15000
-                        double randomPrice = 5000 + (Math.random() * 10000);
-                        BigDecimal pricePerDay = BigDecimal.valueOf(Math.round(randomPrice / 100.0) * 100.0);
-                        BigDecimal pricePerHour = pricePerDay.divide(BigDecimal.valueOf(10), 2, java.math.RoundingMode.HALF_UP); // Journée de 10h
+                        BigDecimal pricePerDay = BigDecimal.valueOf(10000);
+                        BigDecimal pricePerHour = BigDecimal.valueOf(1000);
 
                         PricingEntity pricing = PricingEntity.builder()
                             .id(UUID.randomUUID())
@@ -353,25 +449,27 @@ public class DataSeeder implements CommandLineRunner {
                             .build();
 
                         return pricingRepository.save(pricing).thenReturn(savedDriver);
-                    });
+                    })
+                    .onErrorResume(DuplicateKeyException.class, e -> Mono.empty());
             })
             .count()
             .map(Long::intValue);
     }
 
-    private Mono<Void> updateOrganizationCounters(UUID orgId, int agencyCount, SubscriptionPlanEntity plan) {
+    private Mono<Void> updateOrganizationCounters(UUID orgId) {
         return organizationRepository.findById(orgId)
             .flatMap(org -> {
                 Mono<Long> totalVehicles = vehicleRepository.findAllByOrganizationId(orgId).count();
                 Mono<Long> totalDrivers = driverRepository.findAllByOrganizationId(orgId).count();
                 Mono<Long> totalStaff = staffRepository.findAllStaffByOrganizationId(orgId).count();
+                Mono<Long> totalAgencies = agencyRepository.findAllByOrganizationId(orgId).count();
 
-                return Mono.zip(totalVehicles, totalDrivers, totalStaff)
+                return Mono.zip(totalVehicles, totalDrivers, totalStaff, totalAgencies)
                     .flatMap(tuple -> {
-                        org.setCurrentAgencies(agencyCount);
                         org.setCurrentVehicles(tuple.getT1().intValue());
                         org.setCurrentDrivers(tuple.getT2().intValue());
                         org.setCurrentUsers(tuple.getT3().intValue());
+                        org.setCurrentAgencies(tuple.getT4().intValue());
                         return organizationRepository.save(org);
                     });
             })

@@ -1,13 +1,11 @@
 package com.project.apirental.modules.rental.api;
 
 import com.project.apirental.modules.rental.domain.RentalEntity;
-import com.project.apirental.modules.rental.dto.AgencyRentalRequest;
 import com.project.apirental.modules.rental.dto.PaymentRequest;
 import com.project.apirental.modules.rental.dto.RentalInitRequest;
 import com.project.apirental.modules.rental.dto.RentalInitResponse;
 import com.project.apirental.modules.rental.services.RentalPaymentService;
 import com.project.apirental.modules.rental.services.RentalService;
-import com.project.apirental.shared.enums.RentalStatus;
 import com.project.apirental.modules.auth.repository.UserRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -34,7 +32,11 @@ public class RentalController {
     private final RentalPaymentService paymentService;
     private final UserRepository userRepository;
 
-    @Operation(summary = "Initier une location (Vérification et Devis)")
+    // =================================================================================
+    // ACTIONS (Init, Pay, Start, End, Cancel)
+    // =================================================================================
+
+    @Operation(summary = "Initier une réservation (Devis + Vérification)")
     @PostMapping("/init")
     public Mono<ResponseEntity<RentalInitResponse>> initiateRental(@RequestBody @Valid RentalInitRequest request) {
         return ReactiveSecurityContextHolder.getContext()
@@ -44,7 +46,7 @@ public class RentalController {
             .map(ResponseEntity::ok);
     }
 
-    @Operation(summary = "Effectuer un paiement pour une location")
+    @Operation(summary = "Payer une réservation (60% ou solde)")
     @PostMapping("/{id}/pay")
     public Mono<ResponseEntity<RentalEntity>> payRental(
             @PathVariable UUID id,
@@ -55,6 +57,7 @@ public class RentalController {
 
     @Operation(summary = "Démarrer la location (Récupération véhicule)")
     @PutMapping("/{id}/start")
+    @PreAuthorize("hasRole('ORGANIZATION') or hasRole('AGENT')")
     public Mono<ResponseEntity<RentalEntity>> startRental(@PathVariable UUID id) {
         return rentalService.startRental(id).map(ResponseEntity::ok);
     }
@@ -72,25 +75,67 @@ public class RentalController {
         return rentalService.validateReturn(id).map(ResponseEntity::ok);
     }
 
-    @Operation(summary = "Lister les locations d'une agence (Filtre optionnel par statut)")
-    @GetMapping("/agency/{agencyId}")
-    @PreAuthorize("hasRole('ORGANIZATION') or hasRole('AGENT')")
-    public Flux<RentalEntity> getByAgency(
-            @PathVariable UUID agencyId,
-            @RequestParam(required = false) RentalStatus status) {
-        if (status != null) {
-            return rentalService.getRentalsByAgencyAndStatus(agencyId, status);
-        }
-        return rentalService.getRentalsByAgency(agencyId);
+    @Operation(summary = "Annuler une réservation (Client)")
+    @PutMapping("/{id}/cancel")
+    public Mono<ResponseEntity<RentalEntity>> cancelRental(@PathVariable UUID id) {
+        return rentalService.cancelRental(id).map(ResponseEntity::ok);
     }
 
-    @Operation(summary = "Créer une location par l'agence (Client Walk-in)")
-    @PostMapping("/agency/{agencyId}/create")
+    // =================================================================================
+    // LISTINGS CLIENT
+    // =================================================================================
+
+    @Operation(summary = "CLIENT: Mes réservations actives (En attente, Réservée, Payée)")
+    @GetMapping("/client/reservations/active")
+    public Flux<RentalEntity> getClientActiveReservations() {
+        return ReactiveSecurityContextHolder.getContext()
+            .map(ctx -> ctx.getAuthentication().getName())
+            .flatMap(userRepository::findByEmail)
+            .flatMapMany(user -> rentalService.getClientActiveReservations(user.getId()));
+    }
+
+    @Operation(summary = "CLIENT: Mes locations (En cours et Terminées)")
+    @GetMapping("/client/rentals/history")
+    public Flux<RentalEntity> getClientRentalsHistory() {
+        return ReactiveSecurityContextHolder.getContext()
+            .map(ctx -> ctx.getAuthentication().getName())
+            .flatMap(userRepository::findByEmail)
+            .flatMapMany(user -> rentalService.getClientRentalsHistory(user.getId()));
+    }
+
+    // =================================================================================
+    // LISTINGS AGENCE
+    // =================================================================================
+
+    @Operation(summary = "AGENCE: Toutes les réservations (Actives et Annulées)")
+    @GetMapping("/agency/{agencyId}/reservations")
     @PreAuthorize("hasRole('ORGANIZATION') or hasRole('AGENT')")
-    public Mono<ResponseEntity<RentalInitResponse>> createAgencyRental(
-            @PathVariable UUID agencyId,
-            @RequestBody @Valid AgencyRentalRequest request) {
-        return rentalService.createAgencyRental(agencyId, request)
-                .map(ResponseEntity::ok);
+    public Flux<RentalEntity> getAgencyReservations(@PathVariable UUID agencyId) {
+        return rentalService.getAgencyReservations(agencyId);
+    }
+
+    @Operation(summary = "AGENCE: Toutes les locations (En cours et Terminées)")
+    @GetMapping("/agency/{agencyId}/rentals")
+    @PreAuthorize("hasRole('ORGANIZATION') or hasRole('AGENT')")
+    public Flux<RentalEntity> getAgencyRentals(@PathVariable UUID agencyId) {
+        return rentalService.getAgencyRentals(agencyId);
+    }
+
+    // =================================================================================
+    // LISTINGS ORGANISATION
+    // =================================================================================
+
+    @Operation(summary = "ORGANISATION: Toutes les réservations de toutes les agences")
+    @GetMapping("/org/{orgId}/reservations")
+    @PreAuthorize("hasRole('ORGANIZATION')")
+    public Flux<RentalEntity> getOrgReservations(@PathVariable UUID orgId) {
+        return rentalService.getOrganizationReservations(orgId);
+    }
+
+    @Operation(summary = "ORGANISATION: Toutes les locations de toutes les agences")
+    @GetMapping("/org/{orgId}/rentals")
+    @PreAuthorize("hasRole('ORGANIZATION')")
+    public Flux<RentalEntity> getOrgRentals(@PathVariable UUID orgId) {
+        return rentalService.getOrganizationRentals(orgId);
     }
 }

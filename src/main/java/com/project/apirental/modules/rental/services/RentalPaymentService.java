@@ -1,6 +1,7 @@
 package com.project.apirental.modules.rental.services;
 
 import com.project.apirental.modules.agency.repository.AgencyRepository;
+import com.project.apirental.modules.notification.domain.NotificationTemplate;
 import com.project.apirental.modules.notification.services.NotificationService;
 import com.project.apirental.modules.rental.domain.PaymentEntity;
 import com.project.apirental.modules.rental.domain.RentalEntity;
@@ -9,10 +10,7 @@ import com.project.apirental.modules.rental.repository.PaymentRepository;
 import com.project.apirental.modules.rental.repository.RentalRepository;
 import com.project.apirental.modules.schedule.services.ScheduleService;
 import com.project.apirental.shared.dto.ScheduleRequestDTO;
-import com.project.apirental.shared.enums.NotificationReason;
-import com.project.apirental.shared.enums.NotificationResourceType;
-import com.project.apirental.shared.enums.RentalStatus;
-import com.project.apirental.shared.enums.ResourceType;
+import com.project.apirental.shared.enums.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,7 +35,7 @@ public class RentalPaymentService {
         return rentalRepository.findById(rentalId)
             .switchIfEmpty(Mono.error(new RuntimeException("Location non trouvée")))
             .flatMap(rental -> {
-                // 1. Enregistrer le paiement
+                // 1. Enregistrement du paiement
                 PaymentEntity payment = PaymentEntity.builder()
                     .id(UUID.randomUUID())
                     .rentalId(rentalId)
@@ -53,28 +51,31 @@ public class RentalPaymentService {
                     BigDecimal newAmountPaid = rental.getAmountPaid().add(request.amount());
                     rental.setAmountPaid(newAmountPaid);
 
-                    // 3. Logique d'état (60% / 100%)
+                    // 3. Logique des seuils (60% = RESERVED, 100% = PAID)
                     BigDecimal total = rental.getTotalAmount();
                     BigDecimal sixtyPercent = total.multiply(BigDecimal.valueOf(0.6));
 
                     RentalStatus oldStatus = rental.getStatus();
+                    RentalStatus newStatus = oldStatus;
 
                     if (newAmountPaid.compareTo(total) >= 0) {
-                        rental.setStatus(RentalStatus.PAID);
+                        newStatus = RentalStatus.PAID;
                     } else if (newAmountPaid.compareTo(sixtyPercent) >= 0) {
-                        rental.setStatus(RentalStatus.RESERVED);
+                        newStatus = RentalStatus.RESERVED;
                     }
 
-                    // 4. Mise à jour des revenus de l'agence
-                    Mono<Void> updateAgencyRevenue = agencyRepository.findById(rental.getAgencyId())
+                    rental.setStatus(newStatus);
+
+                    // 4. Mise à jour revenus Agence
+                    Mono<Void> updateRevenue = agencyRepository.findById(rental.getAgencyId())
                         .flatMap(agency -> {
                             agency.setMonthlyRevenue(agency.getMonthlyRevenue() + request.amount().doubleValue());
                             return agencyRepository.save(agency);
                         }).then();
 
-                    // 5. Blocage Planning (Si on passe à RESERVED ou PAID pour la première fois)
+                    // 5. Blocage Planning (Si passage à RESERVED ou PAID pour la première fois)
                     Mono<Void> blockSchedule = Mono.empty();
-                    if (oldStatus == RentalStatus.PENDING && (rental.getStatus() == RentalStatus.RESERVED || rental.getStatus() == RentalStatus.PAID)) {
+                    if (oldStatus == RentalStatus.PENDING && (newStatus == RentalStatus.RESERVED || newStatus == RentalStatus.PAID)) {
                         ScheduleRequestDTO schedule = new ScheduleRequestDTO(
                             rental.getStartDate(), rental.getEndDate(), "RENTED", "Location #" + rental.getId()
                         );
@@ -84,40 +85,47 @@ public class RentalPaymentService {
                         );
                     }
 
-                    // 6. Notifications
+                    // 6. Notifications (Utilisation des Templates)
+                    Mono<Void> notifyClient = (rental.getClientId() != null) ? notificationService.createNotification(
+                        rental.getId(), rental.getClientId(), NotificationResourceType.CLIENT, NotificationReason.PAYMENT_RECEIVED,
+                        rental.getVehicleId(), rental.getDriverId(),
+                        NotificationTemplate.PAYMENT_RECEIVED_CLIENT, request.amount(), newAmountPaid, total, newStatus
+                    ).then() : Mono.empty();
 
-                    // A. Notification Client (Si compte existe)
-                    Mono<Void> notifyClient = Mono.empty();
-                    if (rental.getClientId() != null) {
-                        notifyClient = notificationService.createNotification(
-                            rental.getId(), rental.getClientId(), NotificationResourceType.CLIENT, NotificationReason.PAYMENT_RECEIVED,
-                            rental.getVehicleId(), rental.getDriverId(),
-                            "Paiement de " + request.amount() + " XAF reçu. Statut: " + rental.getStatus()
-                        ).then();
-                    }
-
-                    // B. Notification Agence (Toujours)
                     Mono<Void> notifyAgency = notificationService.createNotification(
                         rental.getId(), rental.getAgencyId(), NotificationResourceType.AGENCY, NotificationReason.PAYMENT_RECEIVED,
                         rental.getVehicleId(), rental.getDriverId(),
-                        "Paiement reçu (" + request.amount() + " XAF) pour la location #" + rental.getId()
+                        NotificationTemplate.PAYMENT_RECEIVED_AGENCY, request.amount(), rental.getId()
                     ).then();
 
-                    // C. Notification Chauffeur (Seulement si la réservation est confirmée pour la première fois)
-                    Mono<Void> notifyDriver = Mono.empty();
-                    if (oldStatus == RentalStatus.PENDING && (rental.getStatus() == RentalStatus.RESERVED || rental.getStatus() == RentalStatus.PAID)) {
-                         notifyDriver = notificationService.createNotification(
-                            rental.getId(), rental.getDriverId(), NotificationResourceType.DRIVER, NotificationReason.RESERVATION,
-                            rental.getVehicleId(), rental.getDriverId(),
-                            "Nouvelle course confirmée du " + rental.getStartDate() + " au " + rental.getEndDate()
-                        ).then();
+                    // Notification spécifique "Réservation Réussie" (Passage à RESERVED)
+                    Mono<Void> notifyReservationSuccess = Mono.empty();
+                    if (oldStatus == RentalStatus.PENDING && newStatus == RentalStatus.RESERVED) {
+                        notifyReservationSuccess = Mono.when(
+                            notificationService.createNotification(
+                                rental.getId(), rental.getClientId(), NotificationResourceType.CLIENT, NotificationReason.RESERVATION_CREATED,
+                                rental.getVehicleId(), rental.getDriverId(),
+                                NotificationTemplate.RESERVATION_CONFIRMED_CLIENT, rental.getId()
+                            ),
+                            notificationService.createNotification(
+                                rental.getId(), rental.getAgencyId(), NotificationResourceType.AGENCY, NotificationReason.RESERVATION_CREATED,
+                                rental.getVehicleId(), rental.getDriverId(),
+                                NotificationTemplate.RESERVATION_CONFIRMED_AGENCY, rental.getId(), rental.getClientId()
+                            ),
+                            // Notif Chauffeur
+                            notificationService.createNotification(
+                                rental.getId(), rental.getDriverId(), NotificationResourceType.DRIVER, NotificationReason.RESERVATION_CREATED,
+                                rental.getVehicleId(), rental.getDriverId(),
+                                NotificationTemplate.RESERVATION_CONFIRMED_DRIVER, rental.getStartDate(), rental.getEndDate()
+                            )
+                        );
                     }
 
-                    return updateAgencyRevenue
+                    return updateRevenue
                         .then(blockSchedule)
                         .then(notifyClient)
                         .then(notifyAgency)
-                        .then(notifyDriver)
+                        .then(notifyReservationSuccess)
                         .then(rentalRepository.save(rental));
                 });
             });

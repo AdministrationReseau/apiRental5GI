@@ -28,7 +28,7 @@ public class CategoryController {
     @Operation(summary = "Créer une catégorie de véhicule")
     @PostMapping("/org/{orgId}")
     // @PreAuthorize("hasRole('ORGANIZATION') or @rbac.hasPermission(#orgId, 'vehiclecategory:create')")
-    @PreAuthorize("hasRole('ORGANIZATION') or ")
+    @PreAuthorize("hasRole('ORGANIZATION')")
     public Mono<ResponseEntity<VehicleCategoryEntity>> create(
             @PathVariable UUID orgId,
             @RequestBody CategoryRequestDTO request) { // Utilisation du DTO ici
@@ -93,7 +93,7 @@ public class CategoryController {
     public Mono<ResponseEntity<VehicleCategoryEntity>> update(
             @PathVariable UUID id,
             @RequestBody CategoryRequestDTO request) {
-        
+
         return categoryRepository.findById(Objects.requireNonNull(id))
                 .flatMap(existingCat -> {
                     existingCat.setName(request.name());

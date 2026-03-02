@@ -17,9 +17,6 @@ public class StatisticsService {
     private final DatabaseClient databaseClient;
     private final AgencyRepository agencyRepository;
 
-    /**
-     * Récupère le Dashboard complet pour une Agence
-     */
     public Mono<FullDashboardDTO> getAgencyDashboard(UUID agencyId, int year) {
         return Mono.zip(
             getGlobalStats(agencyId),
@@ -28,26 +25,16 @@ public class StatisticsService {
             getVehicleStatusDistribution(agencyId),
             getRentalStatusDistribution(agencyId)
         ).map(tuple -> new FullDashboardDTO(
-            tuple.getT1(), // Summary
-            tuple.getT2(), // Revenue Graph
-            tuple.getT3(), // Rental Graph
-            tuple.getT4(), // Vehicle Pie
-            tuple.getT5(), // Rental Pie
-            List.of()      // Pas de comparaison pour une seule agence
+            tuple.getT1(), tuple.getT2(), tuple.getT3(), tuple.getT4(), tuple.getT5(), List.of()
         ));
     }
 
-    /**
-     * Récupère le Dashboard complet pour une Organisation (Agrégat)
-     */
     public Mono<FullDashboardDTO> getOrganizationDashboard(UUID orgId, int year) {
-        // 1. Récupérer les IDs des agences pour les graphiques qui utilisent "IN (:ids)"
         return agencyRepository.findAllByOrganizationId(orgId)
             .map(agency -> agency.getId())
             .collectList()
             .flatMap(agencyIds -> {
                 if (agencyIds.isEmpty()) {
-                    // Si aucune agence, on retourne un dashboard vide
                     return Mono.just(new FullDashboardDTO(
                         new GlobalStatsDTO(0L, 0L, 0L, 0L, 0L, 0L, 0L, BigDecimal.ZERO, BigDecimal.ZERO),
                         new TimeSeriesDataDTO(List.of(), List.of()),
@@ -59,21 +46,14 @@ public class StatisticsService {
                 }
 
                 return Mono.zip(
-                    // CORRECTION ICI : On utilise orgId directement pour les stats globales
                     getGlobalStatsForOrg(orgId),
-                    // Pour les graphes, on passe la liste des IDs
                     getRevenueEvolutionForOrg(agencyIds, year),
                     getRentalEvolutionForOrg(agencyIds, year),
                     getVehicleStatusDistributionForOrg(agencyIds),
                     getRentalStatusDistributionForOrg(agencyIds),
                     getAgencyComparison(orgId)
                 ).map(tuple -> new FullDashboardDTO(
-                    tuple.getT1(),
-                    tuple.getT2(),
-                    tuple.getT3(),
-                    tuple.getT4(),
-                    tuple.getT5(),
-                    tuple.getT6()
+                    tuple.getT1(), tuple.getT2(), tuple.getT3(), tuple.getT4(), tuple.getT5(), tuple.getT6()
                 ));
             });
     }
@@ -87,7 +67,7 @@ public class StatisticsService {
             SELECT
                 (SELECT COUNT(*) FROM vehicles WHERE agency_id = :id) as vehicles,
                 (SELECT COUNT(*) FROM drivers WHERE agency_id = :id) as drivers,
-                (SELECT COUNT(*) FROM staff WHERE agency_id = :id) as staff,
+                (SELECT COUNT(*) FROM users WHERE agency_id = :id AND role = 'STAFF') as staff,
                 (SELECT COUNT(*) FROM rentals WHERE agency_id = :id) as total_rentals,
                 (SELECT COUNT(*) FROM rentals WHERE agency_id = :id AND status = 'ONGOING') as active_rentals,
                 (SELECT COUNT(*) FROM rentals WHERE agency_id = :id AND status = 'RESERVED') as reservations,
@@ -135,8 +115,7 @@ public class StatisticsService {
     private Mono<DistributionDataDTO> getVehicleStatusDistribution(UUID agencyId) {
         return databaseClient.sql("SELECT statut, COUNT(*) as count FROM vehicles WHERE agency_id = :id GROUP BY statut")
             .bind("id", agencyId)
-            .fetch()
-            .all()
+            .fetch().all()
             .collectMap(row -> (String) row.get("statut"), row -> (Long) row.get("count"))
             .map(DistributionDataDTO::new);
     }
@@ -144,8 +123,7 @@ public class StatisticsService {
     private Mono<DistributionDataDTO> getRentalStatusDistribution(UUID agencyId) {
         return databaseClient.sql("SELECT status, COUNT(*) as count FROM rentals WHERE agency_id = :id GROUP BY status")
             .bind("id", agencyId)
-            .fetch()
-            .all()
+            .fetch().all()
             .collectMap(row -> (String) row.get("status"), row -> (Long) row.get("count"))
             .map(DistributionDataDTO::new);
     }
@@ -160,7 +138,7 @@ public class StatisticsService {
                 (SELECT COUNT(*) FROM agencies WHERE organization_id = :id) as agencies,
                 (SELECT COUNT(*) FROM vehicles WHERE organization_id = :id) as vehicles,
                 (SELECT COUNT(*) FROM drivers WHERE organization_id = :id) as drivers,
-                (SELECT COUNT(*) FROM staff WHERE organization_id = :id) as staff,
+                (SELECT COUNT(*) FROM users WHERE organization_id = :id AND role = 'STAFF') as staff,
                 (SELECT COUNT(*) FROM rentals r JOIN agencies a ON r.agency_id = a.id WHERE a.organization_id = :id) as total_rentals,
                 (SELECT COUNT(*) FROM rentals r JOIN agencies a ON r.agency_id = a.id WHERE a.organization_id = :id AND r.status = 'ONGOING') as active_rentals,
                 (SELECT COUNT(*) FROM rentals r JOIN agencies a ON r.agency_id = a.id WHERE a.organization_id = :id AND r.status = 'RESERVED') as reservations,
@@ -208,8 +186,7 @@ public class StatisticsService {
     private Mono<DistributionDataDTO> getVehicleStatusDistributionForOrg(List<UUID> agencyIds) {
          return databaseClient.sql("SELECT statut, COUNT(*) as count FROM vehicles WHERE agency_id IN (:ids) GROUP BY statut")
             .bind("ids", agencyIds)
-            .fetch()
-            .all()
+            .fetch().all()
             .collectMap(row -> (String) row.get("statut"), row -> (Long) row.get("count"))
             .map(DistributionDataDTO::new);
     }
@@ -217,8 +194,7 @@ public class StatisticsService {
     private Mono<DistributionDataDTO> getRentalStatusDistributionForOrg(List<UUID> agencyIds) {
         return databaseClient.sql("SELECT status, COUNT(*) as count FROM rentals WHERE agency_id IN (:ids) GROUP BY status")
             .bind("ids", agencyIds)
-            .fetch()
-            .all()
+            .fetch().all()
             .collectMap(row -> (String) row.get("status"), row -> (Long) row.get("count"))
             .map(DistributionDataDTO::new);
     }
@@ -227,26 +203,14 @@ public class StatisticsService {
     // HELPERS & COMPARAISONS
     // ==========================================
 
-    // Helper pour TimeSeries avec un seul ID (Agence)
     private Mono<TimeSeriesDataDTO> buildTimeSeries(String sql, UUID id, int year) {
-        return databaseClient.sql(sql)
-            .bind("id", id)
-            .bind("year", year)
-            .fetch()
-            .all()
-            .collectList()
-            .map(this::mapRowsToTimeSeries);
+        return databaseClient.sql(sql).bind("id", id).bind("year", year)
+            .fetch().all().collectList().map(this::mapRowsToTimeSeries);
     }
 
-    // Helper pour TimeSeries avec une liste d'IDs (Organisation)
     private Mono<TimeSeriesDataDTO> buildTimeSeriesList(String sql, List<UUID> ids, int year) {
-        return databaseClient.sql(sql)
-            .bind("ids", ids)
-            .bind("year", year)
-            .fetch()
-            .all()
-            .collectList()
-            .map(this::mapRowsToTimeSeries);
+        return databaseClient.sql(sql).bind("ids", ids).bind("year", year)
+            .fetch().all().collectList().map(this::mapRowsToTimeSeries);
     }
 
     private TimeSeriesDataDTO mapRowsToTimeSeries(List<Map<String, Object>> rows) {
@@ -260,7 +224,6 @@ public class StatisticsService {
         return new TimeSeriesDataDTO(labels, values);
     }
 
-    // Comparaison entre agences
     private Mono<List<AgencyComparisonDTO>> getAgencyComparison(UUID orgId) {
         return agencyRepository.findAllByOrganizationId(orgId)
             .flatMap(agency -> {
@@ -283,51 +246,50 @@ public class StatisticsService {
             });
     }
 
-    // Méthode pour obtenir les stats détaillées (Tableau de bord spécifique agence avec mois optionnel)
-    // Utilisé par le endpoint /api/stats/agency/{id}
+    // ==========================================
+    // RAPPORTS DÉTAILLÉS (CORRIGÉS)
+    // ==========================================
+
     public Mono<AgencyStatsDTO> getAgencyStats(UUID agencyId, int year, Integer month) {
         String dateFilter = (month == null)
+            ? "EXTRACT(YEAR FROM r.created_at) = :year"
+            : "EXTRACT(YEAR FROM r.created_at) = :year AND EXTRACT(MONTH FROM r.created_at) = :month";
+
+        String dateFilterNoAlias = (month == null)
             ? "EXTRACT(YEAR FROM created_at) = :year"
             : "EXTRACT(YEAR FROM created_at) = :year AND EXTRACT(MONTH FROM created_at) = :month";
 
-        Mono<BigDecimal> revenueMono = databaseClient.sql("""
-            SELECT COALESCE(SUM(p.amount), 0)
-            FROM payments p
-            JOIN rentals r ON p.rental_id = r.id
-            WHERE r.agency_id = :agencyId
-            AND EXTRACT(YEAR FROM p.transaction_date) = :year
-            """ + (month != null ? " AND EXTRACT(MONTH FROM p.transaction_date) = :month" : ""))
-            .bind("agencyId", agencyId)
-            .bind("year", year)
-            .bind("month", month != null ? month : 0)
-            .map((row, meta) -> row.get(0, BigDecimal.class))
-            .one();
+        String revSql = "SELECT COALESCE(SUM(p.amount), 0) FROM payments p JOIN rentals r ON p.rental_id = r.id WHERE r.agency_id = :agencyId AND EXTRACT(YEAR FROM p.transaction_date) = :year" +
+                        (month != null ? " AND EXTRACT(MONTH FROM p.transaction_date) = :month" : "");
 
-        Mono<Map<String, Long>> rentalCountsMono = databaseClient.sql("SELECT status, COUNT(*) as count FROM rentals WHERE agency_id = :agencyId AND " + dateFilter + " GROUP BY status")
+        DatabaseClient.GenericExecuteSpec revSpec = databaseClient.sql(revSql)
             .bind("agencyId", agencyId)
-            .bind("year", year)
-            .bind("month", month != null ? month : 0)
-            .fetch()
-            .all()
-            .collectMap(
-                row -> (String) row.get("status"),
-                row -> (Long) row.get("count")
-            );
+            .bind("year", year);
+        if (month != null) revSpec = revSpec.bind("month", month);
 
-        Mono<Map<String, Long>> topVehiclesMono = databaseClient.sql("""
-            SELECT v.brand || ' ' || v.model as name, COUNT(*) as count
-            FROM rentals r
-            JOIN vehicles v ON r.vehicle_id = v.id
-            WHERE r.agency_id = :agencyId AND """ + dateFilter + """
-            GROUP BY v.brand, v.model
-            ORDER BY count DESC LIMIT 5
-            """)
+        Mono<BigDecimal> revenueMono = revSpec.map((row, meta) -> row.get(0, BigDecimal.class)).one();
+
+        String countsSql = "SELECT status, COUNT(*) as count FROM rentals WHERE agency_id = :agencyId AND " + dateFilterNoAlias + " GROUP BY status";
+        DatabaseClient.GenericExecuteSpec countsSpec = databaseClient.sql(countsSql)
             .bind("agencyId", agencyId)
-            .bind("year", year)
-            .bind("month", month != null ? month : 0)
-            .fetch()
-            .all()
-            .collectMap(row -> (String) row.get("name"), row -> (Long) row.get("count"));
+            .bind("year", year);
+        if (month != null) countsSpec = countsSpec.bind("month", month);
+
+        Mono<Map<String, Long>> rentalCountsMono = countsSpec.fetch().all().collectMap(
+            row -> (String) row.get("status"),
+            row -> (Long) row.get("count")
+        );
+
+        String topVehSql = "SELECT v.brand || ' ' || v.model as name, COUNT(*) as count FROM rentals r JOIN vehicles v ON r.vehicle_id = v.id WHERE r.agency_id = :agencyId AND " + dateFilter + " GROUP BY v.brand, v.model ORDER BY count DESC LIMIT 5";
+        DatabaseClient.GenericExecuteSpec topVehSpec = databaseClient.sql(topVehSql)
+            .bind("agencyId", agencyId)
+            .bind("year", year);
+        if (month != null) topVehSpec = topVehSpec.bind("month", month);
+
+        Mono<Map<String, Long>> topVehiclesMono = topVehSpec.fetch().all().collectMap(
+            row -> (String) row.get("name"),
+            row -> (Long) row.get("count")
+        );
 
         return Mono.zip(revenueMono, rentalCountsMono, topVehiclesMono, agencyRepository.findById(agencyId))
             .map(tuple -> {
@@ -356,8 +318,6 @@ public class StatisticsService {
             });
     }
 
-    // Méthode pour obtenir les stats globales de l'organisation (Tableau de bord spécifique org)
-    // Utilisé par le endpoint /api/stats/org/{id}
     public Mono<OrgStatsDTO> getOrganizationStats(UUID orgId, int year) {
         return agencyRepository.findAllByOrganizationId(orgId)
             .flatMap(agency -> getAgencyStats(agency.getId(), year, null))

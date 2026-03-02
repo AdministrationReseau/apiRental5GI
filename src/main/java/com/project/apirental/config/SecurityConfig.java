@@ -27,11 +27,14 @@ public class SecurityConfig {
                         // Endpoints publics supplémentaires demandés :
                         .pathMatchers(
                             "/api/vehicles/available",
+                            "/api/vehicles/search", // NOUVEAU
+                            "/api/vehicles/agency/*/available", // NOUVEAU
                             "/uploads/**",
                             "/api/subscriptions/plans/**",
                             "/api/vehicles/categories/all",
                             "/api/agencies/all",
-                            "/api/org/all",
+                            "/api/agencies/search", // NOUVEAU
+                            "/api/agencies/*/details", // NOUVEAU
                             "/api/drivers/{id}/details",
                             "/api/vehicles/{id}/details",
                             "/api/vehicles/drivers/available",
@@ -47,7 +50,7 @@ public class SecurityConfig {
                 )
                 .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
                 .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
-                .addFilterAt(jwtFilter, SecurityWebFiltersOrder.AUTHENTICATION) // Ajout du filtre JWT
+                .addFilterAt(jwtFilter, SecurityWebFiltersOrder.AUTHENTICATION)
                 .build();
     }
 

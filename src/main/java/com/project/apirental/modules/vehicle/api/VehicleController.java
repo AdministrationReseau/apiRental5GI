@@ -31,7 +31,7 @@ import java.util.UUID;
 public class VehicleController {
 
     private final VehicleService vehicleService;
-    private final DriverService driverService; // Injection du service Driver
+    private final DriverService driverService;
 
     @Operation(summary = "Ajouter un véhicule à la flotte (Vérifie les quotas)")
     @NotNull
@@ -59,7 +59,23 @@ public class VehicleController {
         return vehicleService.getAvailableVehicles();
     }
 
-    // --- NOUVEL ENDPOINT DEMANDÉ ---
+    // Route publique pour rechercher des véhicules
+    @Operation(summary = "Rechercher des véhicules disponibles (Client)")
+    @GetMapping("/search")
+    public Flux<VehicleResponseDTO> searchVehicles(
+            @RequestParam(required = false) UUID agencyId,
+            @RequestParam(required = false) UUID categoryId,
+            @RequestParam(required = false) String keyword) {
+        return vehicleService.searchAvailableVehicles(agencyId, categoryId, keyword);
+    }
+
+    // Route publique pour lister les véhicules disponibles d'une agence
+    @Operation(summary = "Lister les véhicules disponibles d'une agence (Client)")
+    @GetMapping("/agency/{agencyId}/available")
+    public Flux<VehicleResponseDTO> getAvailableVehiclesByAgency(@PathVariable UUID agencyId) {
+        return vehicleService.getAvailableVehiclesByAgency(agencyId);
+    }
+
     @Operation(summary = "Trouver les chauffeurs disponibles pour une agence sur une période")
     @GetMapping("/drivers/available")
     public Flux<DriverResponseDTO> getAvailableDriversForBooking(
@@ -69,7 +85,6 @@ public class VehicleController {
     ) {
         return driverService.getAvailableDrivers(agencyId, startDate, endDate);
     }
-    // -------------------------------
 
     @Operation(summary = "Obtenir les détails complets (Planning + Prix + evaluation) d'un véhicule")
     @GetMapping("/{id}/details")

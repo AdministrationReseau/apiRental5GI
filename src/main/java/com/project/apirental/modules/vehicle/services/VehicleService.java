@@ -58,12 +58,10 @@ public class VehicleService {
                 .switchIfEmpty(Mono.<OrganizationEntity>error(new RuntimeException("Organisation non trouvée")))
                 .flatMap(org -> planRepository.findById(Objects.requireNonNull(org.getSubscriptionPlanId()))
                         .flatMap(plan -> {
-
                             if (org.getCurrentVehicles() >= plan.getMaxVehicles()) {
                                 return Mono.<VehicleEntity>error(new RuntimeException(
                                         "Quota de véhicules atteint pour votre plan (" + plan.getName() + ")"));
                             }
-
                             try {
                                 Json functionalitiesJson = Json.of(objectMapper.writeValueAsString(request.functionalities()));
                                 Json engineJson = Json.of(objectMapper.writeValueAsString(request.engineDetails()));
@@ -109,9 +107,7 @@ public class VehicleService {
                             } catch (Exception e) {
                                 return Mono.error(new RuntimeException("Erreur de sérialisation des données véhicule"));
                             }
-
                         }))
-                // Modification ici : on utilise enrichVehicle pour récupérer la catégorie ET le prix (vide au début)
                 .flatMap(this::enrichVehicle)
                 .doOnSuccess(v -> eventPublisher.publishEvent(
                         new AuditEvent("CREATE_VEHICLE", "VEHICLE", "Véhicule ajouté : " + v.licencePlate())));
@@ -129,29 +125,18 @@ public class VehicleService {
     public Mono<VehicleDetailResponseDTO> getVehicleDetails(UUID id) {
         return vehicleRepository.findById(Objects.requireNonNull(id))
             .flatMap(vehicle -> {
-                // 1. Récupération des données liées
                 var scheduleFlux = scheduleService.getResourceSchedule(ResourceType.VEHICLE, id).collectList();
                 var reviewsFlux = reviewService.getReviews(ResourceType.VEHICLE, id).collectList();
-
-                // 2. Récupération de l'organisation
                 Mono<Boolean> orgRequirementMono = organizationRepository.findById(vehicle.getOrganizationId())
                         .map(org -> org.getIsDriverBookingRequired() != null ? org.getIsDriverBookingRequired() : false)
                         .defaultIfEmpty(false);
-
-                // 3. Enrichissement (Récupère Catégorie + Prix)
                 Mono<VehicleResponseDTO> vehicleDtoMono = enrichVehicle(vehicle);
 
-                // 4. Assemblage
                 return Mono.zip(vehicleDtoMono, scheduleFlux, reviewsFlux, orgRequirementMono)
                     .map(tuple -> {
                         VehicleResponseDTO vDto = tuple.getT1();
                         return new VehicleDetailResponseDTO(
-                            vDto,
-                            vDto.pricing(), // On réutilise le prix récupéré dans enrichVehicle
-                            tuple.getT2(), // Schedule
-                            vehicle.getRating(),
-                            tuple.getT3(), // Reviews
-                            tuple.getT4()  // isDriverBookingRequired
+                            vDto, vDto.pricing(), tuple.getT2(), vehicle.getRating(), tuple.getT3(), tuple.getT4()
                         );
                     });
             });
@@ -167,48 +152,49 @@ public class VehicleService {
                 Mono<Void> pricingMono = Mono.empty();
                 if (request.pricePerHour() != null || request.pricePerDay() != null) {
                     pricingMono = pricingService.setPricing(
-                        vehicle.getOrganizationId(),
-                        ResourceType.VEHICLE,
-                        vehicle.getId(),
-                        request.pricePerHour(),
-                        request.pricePerDay()
+                        vehicle.getOrganizationId(), ResourceType.VEHICLE, vehicle.getId(), request.pricePerHour(), request.pricePerDay()
                     ).then();
                 }
                 Mono<Void> scheduleMono = Mono.empty();
                 if (request.schedule() != null) {
                     scheduleMono = scheduleService.addUnavailability(
-                        vehicle.getOrganizationId(),
-                        ResourceType.VEHICLE,
-                        vehicle.getId(),
-                        request.schedule()
+                        vehicle.getOrganizationId(), ResourceType.VEHICLE, vehicle.getId(), request.schedule()
                     ).then();
                 }
-                return vehicleRepository.save(vehicle)
-                    .then(pricingMono)
-                    .then(scheduleMono)
-                    .thenReturn(vehicle);
+                return vehicleRepository.save(vehicle).then(pricingMono).then(scheduleMono).thenReturn(vehicle);
             })
             .flatMap(vehicle -> getVehicleDetails(vehicle.getId()));
     }
 
     public Flux<VehicleResponseDTO> getVehiclesByOrg(UUID orgId) {
-        return vehicleRepository.findAllByOrganizationId(orgId)
-                .flatMap(this::enrichVehicle);
+        return vehicleRepository.findAllByOrganizationId(orgId).flatMap(this::enrichVehicle);
     }
 
     public Flux<VehicleResponseDTO> getVehiclesByAgency(UUID agencyId) {
-        return vehicleRepository.findAllByAgencyId(agencyId)
-                .flatMap(this::enrichVehicle);
+        return vehicleRepository.findAllByAgencyId(agencyId).flatMap(this::enrichVehicle);
     }
 
     public Flux<VehicleResponseDTO> getAvailableVehicles() {
-        return vehicleRepository.findAllByStatut("AVAILABLE")
+        return vehicleRepository.findAllByStatut("AVAILABLE").flatMap(this::enrichVehicle);
+    }
+
+    // NOUVEAU : Service de recherche de véhicules disponibles
+    public Flux<VehicleResponseDTO> searchAvailableVehicles(UUID agencyId, UUID categoryId, String keyword) {
+        return vehicleRepository.searchAvailableVehicles(
+                agencyId,
+                categoryId,
+                keyword != null && !keyword.isBlank() ? keyword : null
+        ).flatMap(this::enrichVehicle);
+    }
+
+    // NOUVEAU : Lister les véhicules disponibles d'une agence
+    public Flux<VehicleResponseDTO> getAvailableVehiclesByAgency(UUID agencyId) {
+        return vehicleRepository.findAllByAgencyIdAndStatut(agencyId, "AVAILABLE")
                 .flatMap(this::enrichVehicle);
     }
 
     public Mono<VehicleResponseDTO> getVehicleById(UUID id) {
-        return vehicleRepository.findById(Objects.requireNonNull(id))
-                .flatMap(this::enrichVehicle);
+        return vehicleRepository.findById(Objects.requireNonNull(id)).flatMap(this::enrichVehicle);
     }
 
     @Transactional
@@ -229,19 +215,12 @@ public class VehicleService {
                     v.setColor(request.color());
                     v.setTransmission(request.transmission());
                     try {
-                        Json functionalitiesJson = Json.of(objectMapper.writeValueAsString(request.functionalities()));
-                        Json engineJson = Json.of(objectMapper.writeValueAsString(request.engineDetails()));
-                        Json fuelEfficiencyJson = Json.of(objectMapper.writeValueAsString(request.fuelEfficiency()));
-                        Json insuranceJson = Json.of(objectMapper.writeValueAsString(request.insuranceDetails()));
-                        Json descJson = Json.of(objectMapper.writeValueAsString(request.description()));
-                        Json imgsJson = Json.of(objectMapper.writeValueAsString(request.images()));
-
-                        v.setFunctionalities(functionalitiesJson);
-                        v.setEngineDetails(engineJson);
-                        v.setFuelEfficiency(fuelEfficiencyJson);
-                        v.setInsuranceDetails(insuranceJson);
-                        v.setDescriptionList(descJson);
-                        v.setImagesList(imgsJson);
+                        v.setFunctionalities(Json.of(objectMapper.writeValueAsString(request.functionalities())));
+                        v.setEngineDetails(Json.of(objectMapper.writeValueAsString(request.engineDetails())));
+                        v.setFuelEfficiency(Json.of(objectMapper.writeValueAsString(request.fuelEfficiency())));
+                        v.setInsuranceDetails(Json.of(objectMapper.writeValueAsString(request.insuranceDetails())));
+                        v.setDescriptionList(Json.of(objectMapper.writeValueAsString(request.description())));
+                        v.setImagesList(Json.of(objectMapper.writeValueAsString(request.images())));
                     } catch (Exception e) {
                         return Mono.error(new RuntimeException("Erreur de sérialisation des données véhicule"));
                     }
@@ -268,26 +247,22 @@ public class VehicleService {
                         .then(updateAgencyVehicleStats(v.getAgencyId(), -1)));
     }
 
-    // --- METHODE MISE A JOUR : enrichVehicle ---
-    // Récupère la catégorie ET le prix pour construire le DTO complet
     private Mono<VehicleResponseDTO> enrichVehicle(VehicleEntity vehicle) {
         Mono<VehicleCategoryEntity> categoryMono = categoryRepository.findById(Objects.requireNonNull(vehicle.getCategoryId()))
                 .defaultIfEmpty(VehicleCategoryEntity.builder().name("Unknown").build());
 
         Mono<PricingEntity> pricingMono = pricingService.getPricing(ResourceType.VEHICLE, vehicle.getId())
-                .defaultIfEmpty(new PricingEntity()); // Retourne un objet vide si pas de prix
+                .defaultIfEmpty(new PricingEntity());
 
         return Mono.zip(categoryMono, pricingMono)
                 .map(tuple -> vehicleMapper.toDto(vehicle, tuple.getT1(), tuple.getT2()));
     }
 
     public Flux<VehicleResponseDTO> getVehiclesByOrgAndCategory(UUID orgId, UUID categoryId) {
-        return vehicleRepository.findAllByOrganizationIdAndCategoryId(orgId, categoryId)
-                .flatMap(this::enrichVehicle);
+        return vehicleRepository.findAllByOrganizationIdAndCategoryId(orgId, categoryId).flatMap(this::enrichVehicle);
     }
 
     public Flux<VehicleResponseDTO> getVehiclesByAgencyAndCategory(UUID agencyId, UUID categoryId) {
-        return vehicleRepository.findAllByAgencyIdAndCategoryId(agencyId, categoryId)
-                .flatMap(this::enrichVehicle);
+        return vehicleRepository.findAllByAgencyIdAndCategoryId(agencyId, categoryId).flatMap(this::enrichVehicle);
     }
 }

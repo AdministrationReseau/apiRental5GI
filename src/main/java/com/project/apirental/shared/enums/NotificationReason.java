@@ -1,10 +1,13 @@
 package com.project.apirental.shared.enums;
 
 public enum NotificationReason {
-    RESERVATION,          // Création de la demande
-    PAYMENT_RECEIVED,     // Paiement effectué
-    LOCATION_START,       // Début effectif (récupération véhicule)
-    LOCATION_END_SIGNAL,  // Client signale le retour
-    LOCATION_END,         // Agence valide le retour (Fin définitive)
-    MAINTENANCE_SCHEDULED // Maintenance auto après location
+    RESERVATION_CREATED,    // Succès de la réservation (60% payé)
+    PAYMENT_COMPLETED,      // 100% payé
+    LOCATION_START,         // Début effectif
+    LOCATION_END_SIGNAL,    // Signalement retour
+    LOCATION_END,           // Validation retour
+    CANCELLATION,           // Annulation
+    REFUND_PROCESSED,       // Remboursement
+    PAYMENT_RECEIVED,       // Paiement reçu
+    MAINTENANCE_SCHEDULED   // Maintenance auto
 }

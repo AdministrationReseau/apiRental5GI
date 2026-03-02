@@ -18,19 +18,8 @@ import java.util.UUID;
 public class ScheduleService {
     private final ScheduleRepository scheduleRepository;
 
-    /**
-     * Ajoute une période d'indisponibilité (Panne, Maladie, etc.)
-     */
     @Transactional
     public Mono<ScheduleEntity> addUnavailability(UUID orgId, ResourceType type, UUID resourceId, ScheduleRequestDTO request) {
-        if (request.endDate().isBefore(request.startDate())) {
-            return Mono.error(new IllegalArgumentException("La date de fin doit être après la date de début"));
-        }
-        if (request.startDate().isBefore(LocalDateTime.now().minusMinutes(1))) {
-           // Sauf si c'est pour régulariser. Ici on bloque le passé.
-           return Mono.error(new IllegalArgumentException("Impossible de planifier dans le passé"));
-        }
-
         ScheduleEntity schedule = ScheduleEntity.builder()
                 .id(UUID.randomUUID())
                 .organizationId(orgId)
@@ -48,7 +37,18 @@ public class ScheduleService {
     }
 
     public Flux<ScheduleEntity> getResourceSchedule(ResourceType type, UUID resourceId) {
-        // On ne retourne que les événements futurs ou en cours
         return scheduleRepository.findFutureSchedules(type, resourceId, LocalDateTime.now());
+    }
+
+    /**
+     * Supprime les entrées de planning correspondant à une période et une ressource.
+     * Utilisé lors de l'annulation d'une réservation.
+     */
+    @Transactional
+    public Mono<Void> removeScheduleForRental(UUID vehicleId, UUID driverId, LocalDateTime start, LocalDateTime end) {
+        // Logique simplifiée : on supprime les schedules qui correspondent exactement aux dates
+        // Dans une implémentation réelle, on pourrait stocker le rentalId dans la table schedule pour une suppression précise
+        return scheduleRepository.deleteByResourceIdAndDates(vehicleId, start, end)
+                .then(driverId != null ? scheduleRepository.deleteByResourceIdAndDates(driverId, start, end) : Mono.empty());
     }
 }

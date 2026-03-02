@@ -62,7 +62,7 @@ public class OrganizationEntity implements Persistable<UUID> {
     private String logoUrl;
 
     // Subscription
-    private UUID subscriptionPlanId; 
+    private UUID subscriptionPlanId;
     private LocalDateTime subscriptionExpiresAt;
     @Builder.Default
     private Boolean subscriptionAutoRenew = true;
@@ -87,5 +87,5 @@ public class OrganizationEntity implements Persistable<UUID> {
     }
 
     @Builder.Default
-    private Boolean isDriverBookingRequired = false;
+    private Boolean isDriverBookingRequired = true;
 }

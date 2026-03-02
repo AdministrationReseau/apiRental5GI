@@ -25,23 +25,36 @@ public class AgencyController {
 
     private final AgencyService agencyService;
 
-    
     @Operation(summary = "Lister toutes les agences de la plateforme")
     @GetMapping("/all")
     public Flux<AgencyResponseDTO> getAll() {
         return agencyService.getAllAgencies();
     }
 
+    // NOUVEAU : Route publique pour rechercher des agences
+    @Operation(summary = "Rechercher des agences (Client)")
+    @GetMapping("/search")
+    public Flux<AgencyResponseDTO> searchAgencies(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String city) {
+        return agencyService.searchAgencies(keyword, city);
+    }
+
+    // NOUVEAU : Route publique pour voir les détails d'une agence
+    @Operation(summary = "Détails d'une agence (Client)")
+    @GetMapping("/{id}/details")
+    public Mono<ResponseEntity<AgencyResponseDTO>> getAgencyDetailsClient(@PathVariable UUID id) {
+        return agencyService.getAgency(id).map(ResponseEntity::ok);
+    }
+
     @Operation(summary = "Lister les agences d'une organisation")
     @GetMapping("/org/{orgId}")
-    // @PreAuthorize("hasRole('ORGANIZATION') or hasRole('ADMIN')")
     public Flux<AgencyResponseDTO> getByOrg(@PathVariable UUID orgId) {
         return agencyService.getAgenciesByOrg(orgId);
     }
 
-    @Operation(summary = "Obtenir les détails d'une agence")
+    @Operation(summary = "Obtenir les détails d'une agence (Admin/Org)")
     @GetMapping("/{id}")
-    // @PreAuthorize("hasAnyRole('ORGANIZATION', 'ADMIN', 'AGENT')")
     public Mono<ResponseEntity<AgencyResponseDTO>> getById(@PathVariable UUID id) {
         return agencyService.getAgency(id).map(ResponseEntity::ok);
     }
@@ -64,7 +77,7 @@ public class AgencyController {
 
     @Operation(summary = "Supprimer une agence")
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ORGANIZATION') or @rbac.canAccessAgency(#id, 'agency:delete'")
+    @PreAuthorize("hasRole('ORGANIZATION') or @rbac.canAccessAgency(#id, 'agency:delete')")
     public Mono<ResponseEntity<Void>> delete(@PathVariable UUID id) {
         return agencyService.deleteAgency(id).then(Mono.just(ResponseEntity.noContent().build()));
     }

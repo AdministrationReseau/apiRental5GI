@@ -83,7 +83,6 @@ public class DataSeeder implements CommandLineRunner {
         log.info("🧹 Purge des données existantes (excepté postes / permissions) …");
         return pricingRepository.deleteAll()
             .then(driverRepository.deleteAll())
-            .then(vehicleRepository.deleteAll())
             .then(agencyRepository.deleteAll())
             .then(staffRepository.deleteAll())
             .then(userRepository.deleteAll())

@@ -27,24 +27,18 @@ public class OpenApiConfig {
                                         .bearerFormat("JWT")));
     }
 
-    // ========================================================================
-    // GROUPE 1 : AUTHENTIFICATION & PUBLIC
-    // ========================================================================
     @Bean
     public GroupedOpenApi authApi() {
         return GroupedOpenApi.builder()
                 .group("1-Public-Auth")
                 .pathsToMatch(
-                        "/auth/**",                  // Login, Register, Refresh Token
-                        "/api/media/**",             // Upload de fichiers
-                        "/api/subscriptions/plans"   // Catalogue des plans (Public)
+                        "/auth/**",
+                        "/api/media/**",
+                        "/api/subscriptions/plans"
                 )
                 .build();
     }
 
-    // ========================================================================
-    // GROUPE 2 : ESPACE CLIENT (Application Mobile / Site Web)
-    // ========================================================================
     @Bean
     public GroupedOpenApi clientApi() {
         return GroupedOpenApi.builder()
@@ -52,68 +46,57 @@ public class OpenApiConfig {
                 .pathsToMatch(
                         // --- Recherche & Consultation ---
                         "/api/vehicles/available",
-                        "/api/vehicles/search",
-                        "/api/vehicles/{id}/details",       // Détails complets véhicule
+                        "/api/vehicles/search",             
+                        "/api/vehicles/agency/*/available",
+                        "/api/vehicles/{id}/details",
                         "/api/vehicles/categories/all",
-                        "/api/drivers/{id}/details",        // Détails chauffeur
+                        "/api/vehicles/drivers/available",
+                        "/api/drivers/{id}/details",
                         "/api/agencies/all",
-                        "/api/agencies/{id}",
-                        "/api/reviews/**",                  // Lire et poster des avis
+                        "/api/agencies/search",
+                        "/api/agencies/{id}/details",
+                        "/api/reviews/**",
 
                         // --- Processus de Location ---
-                        "/api/rentals/init",                // Créer un devis/réservation
-                        "/api/rentals/{id}/pay",            // Payer
-                        "/api/rentals/{id}/cancel",         // Annuler
-                        "/api/rentals/{id}/end-signal",     // Signaler fin de course
-                        "/api/rentals/client/**",           // Listings spécifiques client
-                        "/api/rentals/my-rentals",          // Mes locations
+                        "/api/rentals/init",
+                        "/api/rentals/{id}/pay",
+                        "/api/rentals/{id}/cancel",
+                        "/api/rentals/{id}/end-signal",
+                        "/api/rentals/client/**",
+                        "/api/rentals/my-rentals",
 
                         // --- Données Personnelles ---
-                        "/api/notifications/client/**",     // Mes notifications
-                        "/api/notifications/{id}/read",     // Marquer comme lu
-                        "/api/transactions/client/**"       // Mon historique financier
+                        "/api/notifications/client/**",
+                        "/api/notifications/{id}/read",
+                        "/api/transactions/client/**"
                 )
                 .build();
     }
 
-    // ========================================================================
-    // GROUPE 3 : ESPACE ORGANISATION & AGENCE (Back-Office)
-    // ========================================================================
     @Bean
     public GroupedOpenApi orgApi() {
         return GroupedOpenApi.builder()
                 .group("3-Espace-Gestion")
                 .pathsToMatch(
-                        // --- Administration ---
-                        "/api/org/**",                      // Gestion de l'organisation
-                        "/api/agencies/**",                 // CRUD Agences
-                        "/api/subscriptions/**",            // Gestion abonnement (Upgrade, Renew)
-
-                        // --- Ressources Humaines ---
-                        "/api/staff/**",                    // Gestion du personnel
-                        "/api/postes/**",                   // Gestion des postes
-                        "/api/permissions/**",              // Liste des permissions
-
-                        // --- Gestion de Flotte ---
-                        "/api/vehicles/**",                 // CRUD Véhicules (Org/Agency endpoints)
-                        "/api/drivers/**",                  // CRUD Chauffeurs
-                        "/api/vehicles/categories/**",      // Gestion catégories
-
-                        // --- Gestion des Locations ---
-                        "/api/rentals/agency/**",           // Liste locations par agence
-                        "/api/rentals/org/**",              // Liste locations par organisation
-                        "/api/rentals/{id}/start",          // Valider départ
-                        "/api/rentals/{id}/validate-return",// Valider retour
-
-                        // --- Suivi & Finances ---
-                        "/api/stats/**",                    // Dashboards & Rapports
-                        "/api/transactions/org/**",         // Grand livre Organisation
-                        "/api/transactions/agency/**",      // Transactions Agence
-
-                        // --- Communication ---
-                        "/api/notifications/org/**",        // Notifs Organisation
-                        "/api/notifications/agency/**",     // Notifs Agence
-                        "/api/notifications/{id}/read"      // Marquer comme lu
+                        "/api/org/**",
+                        "/api/agencies/**",
+                        "/api/subscriptions/**",
+                        "/api/staff/**",
+                        "/api/postes/**",
+                        "/api/permissions/**",
+                        "/api/vehicles/**",
+                        "/api/drivers/**",
+                        "/api/vehicles/categories/**",
+                        "/api/rentals/agency/**",
+                        "/api/rentals/org/**",
+                        "/api/rentals/{id}/start",
+                        "/api/rentals/{id}/validate-return",
+                        "/api/stats/**",
+                        "/api/transactions/org/**",
+                        "/api/transactions/agency/**",
+                        "/api/notifications/org/**",
+                        "/api/notifications/agency/**",
+                        "/api/notifications/{id}/read"
                 )
                 .build();
     }

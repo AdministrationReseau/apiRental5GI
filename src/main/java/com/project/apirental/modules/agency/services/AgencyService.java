@@ -1,4 +1,3 @@
-
 package com.project.apirental.modules.agency.services;
 
 import com.project.apirental.modules.agency.domain.AgencyEntity;
@@ -29,7 +28,6 @@ public class AgencyService {
     private final SubscriptionPlanRepository planRepository;
     private final AgencyMapper agencyMapper;
     private final ApplicationEventPublisher eventPublisher;
-    
 
     @Transactional
     public Mono<AgencyResponseDTO> createAgency(UUID orgId, AgencyRequestDTO request) {
@@ -37,22 +35,20 @@ public class AgencyService {
             .switchIfEmpty(Mono.error(new RuntimeException("Organisation non trouvée")))
             .flatMap(org -> planRepository.findById(Objects.requireNonNull(org.getSubscriptionPlanId()))
                 .flatMap(plan -> {
-                    // 1. VERIFICATION QUOTA AGENCES
                     if (org.getCurrentAgencies() >= plan.getMaxAgencies()) {
                         return Mono.error(new RuntimeException("Quota d'agences atteint pour votre plan (" + plan.getName() + ")"));
                     }
 
-                    // 2. PREPARATION DE L'AGENCE
                    AgencyEntity agency = AgencyEntity.builder()
                         .id(UUID.randomUUID())
                         .organizationId(orgId)
                         .name(request.name())
-                        .description(request.description()) // Ajouté
+                        .description(request.description())
                         .address(request.address())
                         .city(request.city())
                         .country(request.country() != null ? request.country() : "CM")
-                        .postalCode(request.postalCode()) // Ajouté
-                        .region(request.region()) // Ajouté
+                        .postalCode(request.postalCode())
+                        .region(request.region())
                         .phone(request.phone())
                         .email(request.email())
                         .managerId(request.managerId())
@@ -70,8 +66,6 @@ public class AgencyService {
                         .isNewRecord(true)
                         .build();
 
-
-                    // 3. SAUVEGARDE + MISE A JOUR COMPTEUR ORG
                     return agencyRepository.save(Objects.requireNonNull(agency))
                             .flatMap(savedAgency -> {
                                 org.setCurrentAgencies(org.getCurrentAgencies() + 1);
@@ -83,10 +77,6 @@ public class AgencyService {
             .map(agencyMapper::toDto);
     }
 
-    /**
-     * Cette méthode pourra être appelée par les modules Vehicle ou Staff 
-     * pour vérifier si l'organisation a encore du crédit dans son plan.
-     */
     public Mono<Boolean> canAddResource(UUID orgId, String resourceType) {
         return organizationRepository.findById(Objects.requireNonNull(orgId))
             .flatMap(org -> planRepository.findById(Objects.requireNonNull(org.getSubscriptionPlanId()))
@@ -105,9 +95,6 @@ public class AgencyService {
                 .map(agencyMapper::toDto);
     }
 
-    /**
-     * Lister toutes les agences de la plateforme
-     */
     public Flux<AgencyResponseDTO> getAllAgencies() {
         return agencyRepository.findAll().map(agencyMapper::toDto);
     }
@@ -118,6 +105,13 @@ public class AgencyService {
                 .switchIfEmpty(Mono.error(new RuntimeException("Agence non trouvée")));
     }
 
+    // NOUVEAU : Service de recherche d'agences
+    public Flux<AgencyResponseDTO> searchAgencies(String keyword, String city) {
+        return agencyRepository.searchAgencies(
+                keyword != null && !keyword.isBlank() ? keyword : null,
+                city != null && !city.isBlank() ? city : null
+        ).map(agencyMapper::toDto);
+    }
 
     @Transactional
     public Mono<AgencyResponseDTO> updateAgency(UUID id, AgencyRequestDTO request) {
@@ -137,10 +131,10 @@ public class AgencyService {
                     if(request.longitude() != null) existing.setLongitude(request.longitude());
                     if(request.geofenceRadius() != null) existing.setGeofenceRadius(request.geofenceRadius());
                     if(request.is24Hours() != null) existing.setIs24Hours(request.is24Hours());
-                    if(request.timezone() != null) existing.setTimezone(request.timezone());    
+                    if(request.timezone() != null) existing.setTimezone(request.timezone());
                     if(request.workingHours() != null) existing.setWorkingHours(request.workingHours());
                     if(request.allowOnlineBooking() != null) existing.setAllowOnlineBooking(request.allowOnlineBooking());
-                    if(request.depositPercentage() != null) existing.setDepositPercentage(request.depositPercentage()); 
+                    if(request.depositPercentage() != null) existing.setDepositPercentage(request.depositPercentage());
                     if(request.logoUrl() != null) existing.setLogoUrl(request.logoUrl());
                     if(request.primaryColor() != null) existing.setPrimaryColor(request.primaryColor());
                     if(request.secondaryColor() != null) existing.setSecondaryColor(request.secondaryColor());
@@ -158,5 +152,4 @@ public class AgencyService {
                         new AuditEvent("DELETE_AGENCY", "AGENCY", "Deleted agency ID: " + id)
                 ));
     }
-    
 }

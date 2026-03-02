@@ -41,7 +41,15 @@ public class OpenApiConfig {
                 .pathsToMatch(
                     "/api/client/**",
                     "/api/reviews/**",
-                    "/api/rentals/**")
+                    "/api/rentals/**",
+                    "/api/agencies/all",
+                    "/api/vehicles/{id}/details",
+                    "/api/vehicles/search",
+                    "/api/vehicles/drivers/available",
+                    "/api/vehicles/available",
+                    "/api/vehicles/agency/{agencyId}/available",
+                    "/api/vehicles/categories/all",
+                    "/api/drivers/{id}/details")
                 .build();
     }
 

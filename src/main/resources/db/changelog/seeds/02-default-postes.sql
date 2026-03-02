@@ -1,14 +1,15 @@
--- 1. Création du Poste Manager (ID fixe pour référence système)
+-- 1. Créer le poste Manager Système (si n'existe pas)
 INSERT INTO postes (id, organization_id, name, description, created_at)
-VALUES ('00000000-0000-0000-0000-000000000001', NULL, 'Manager d''Agence', 'Gestionnaire opérationnel : gère le staff, les véhicules et les chauffeurs de son agence.', NOW())
-ON CONFLICT (id) DO NOTHING;
+SELECT gen_random_uuid(), NULL, 'Manager Système', 'Poste par défaut avec accès complet à la gestion d''agence', NOW()
+WHERE NOT EXISTS (
+    SELECT 1 FROM postes WHERE name = 'Manager Système' AND organization_id IS NULL
+);
 
--- 2. Attribution des permissions limitées
--- On exclut explicitement la création et la suppression d'agences
+-- 2. Associer TOUTES les permissions au poste Manager Système
+-- On utilise une sous-requête pour récupérer l'ID du poste qu'on vient de créer (ou qui existait)
 INSERT INTO postes_permissions (poste_id, permission_id)
-SELECT '00000000-0000-0000-0000-000000000001', id FROM permissions
-WHERE (tag LIKE 'agency:read' OR tag LIKE 'agency:update')
-   OR tag LIKE 'staff:%'
-   OR tag LIKE 'vehicle:%'
-   OR tag LIKE 'driver:%'
-ON CONFLICT DO NOTHING;
+SELECT
+    (SELECT id FROM postes WHERE name = 'Manager Système' AND organization_id IS NULL LIMIT 1),
+    p.id
+FROM permissions p
+ON CONFLICT (poste_id, permission_id) DO NOTHING;

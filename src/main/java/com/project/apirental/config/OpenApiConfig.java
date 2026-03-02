@@ -46,7 +46,7 @@ public class OpenApiConfig {
                 .pathsToMatch(
                         // --- Recherche & Consultation ---
                         "/api/vehicles/available",
-                        "/api/vehicles/search",             
+                        "/api/vehicles/search",
                         "/api/vehicles/agency/*/available",
                         "/api/vehicles/{id}/details",
                         "/api/vehicles/categories/all",
@@ -68,7 +68,8 @@ public class OpenApiConfig {
                         // --- Données Personnelles ---
                         "/api/notifications/client/**",
                         "/api/notifications/{id}/read",
-                        "/api/transactions/client/**"
+                        "/api/transactions/client/**",
+                        "/api/users/**"
                 )
                 .build();
     }
@@ -96,7 +97,8 @@ public class OpenApiConfig {
                         "/api/transactions/agency/**",
                         "/api/notifications/org/**",
                         "/api/notifications/agency/**",
-                        "/api/notifications/{id}/read"
+                        "/api/notifications/{id}/read",
+                        "/api/users/**"
                 )
                 .build();
     }

@@ -1,16 +1,19 @@
 package com.project.apirental.modules.rental.api;
 
 import com.project.apirental.modules.auth.repository.UserRepository;
+import com.project.apirental.modules.rental.dto.TransactionDetailResponseDTO;
 import com.project.apirental.modules.rental.dto.TransactionResponseDTO;
 import com.project.apirental.modules.rental.services.TransactionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.util.UUID;
 
@@ -23,6 +26,12 @@ public class TransactionController {
 
     private final TransactionService transactionService;
     private final UserRepository userRepository;
+
+    @Operation(summary = "Détails d'une transaction (Client & Agence/Org)")
+    @GetMapping("/{id}/details")
+    public Mono<ResponseEntity<TransactionDetailResponseDTO>> getTransactionDetails(@PathVariable UUID id) {
+        return transactionService.getTransactionDetails(id).map(ResponseEntity::ok);
+    }
 
     @Operation(summary = "CLIENT: Mes transactions (Historique paiements)")
     @GetMapping("/client/history")

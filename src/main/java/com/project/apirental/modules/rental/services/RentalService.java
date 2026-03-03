@@ -2,16 +2,20 @@ package com.project.apirental.modules.rental.services;
 
 import com.project.apirental.modules.agency.mapper.AgencyMapper;
 import com.project.apirental.modules.agency.repository.AgencyRepository;
+import com.project.apirental.modules.driver.dto.DriverResponseDTO;
+import com.project.apirental.modules.driver.services.DriverService;
 import com.project.apirental.modules.notification.domain.NotificationTemplate;
 import com.project.apirental.modules.notification.services.NotificationService;
 import com.project.apirental.modules.organization.repository.OrganizationRepository;
 import com.project.apirental.modules.pricing.services.PricingService;
 import com.project.apirental.modules.rental.domain.RentalEntity;
+import com.project.apirental.modules.rental.dto.RentalDetailResponseDTO;
 import com.project.apirental.modules.rental.dto.RentalInitRequest;
 import com.project.apirental.modules.rental.dto.RentalInitResponse;
 import com.project.apirental.modules.rental.repository.RentalRepository;
 import com.project.apirental.modules.schedule.services.ScheduleService;
 import com.project.apirental.modules.vehicle.repository.VehicleRepository;
+import com.project.apirental.modules.vehicle.services.VehicleService;
 import com.project.apirental.shared.dto.ScheduleRequestDTO;
 import com.project.apirental.shared.enums.*;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +29,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -40,10 +45,39 @@ public class RentalService {
     private final NotificationService notificationService;
     private final AgencyMapper agencyMapper;
 
-    // Listes de statuts pour les filtres
+    // Nouveaux services injectés pour récupérer les détails
+    private final VehicleService vehicleService;
+    private final DriverService driverService;
+
     private static final List<RentalStatus> RESERVATION_ACTIVE_STATUSES = Arrays.asList(RentalStatus.PENDING, RentalStatus.RESERVED, RentalStatus.PAID);
     private static final List<RentalStatus> RESERVATION_ALL_STATUSES = Arrays.asList(RentalStatus.PENDING, RentalStatus.RESERVED, RentalStatus.PAID, RentalStatus.CANCELLED);
     private static final List<RentalStatus> RENTAL_STATUSES = Arrays.asList(RentalStatus.ONGOING, RentalStatus.UNDER_REVIEW, RentalStatus.COMPLETED);
+
+    // =================================================================================
+    // NOUVELLE MÉTHODE : Obtenir les détails complets d'une location/réservation
+    // =================================================================================
+    public Mono<RentalDetailResponseDTO> getRentalDetails(UUID rentalId) {
+        return rentalRepository.findById(rentalId)
+            .switchIfEmpty(Mono.error(new RuntimeException("Location ou Réservation non trouvée")))
+            .flatMap(rental -> {
+                var vehicleMono = vehicleService.getVehicleById(rental.getVehicleId());
+
+                // Gestion sécurisée du chauffeur (qui peut être null)
+                var driverMono = rental.getDriverId() != null
+                    ? driverService.getDriverById(rental.getDriverId()).map(Optional::of).defaultIfEmpty(Optional.empty())
+                    : Mono.just(Optional.<DriverResponseDTO>empty());
+
+                var agencyMono = agencyRepository.findById(rental.getAgencyId()).map(agencyMapper::toDto);
+
+                return Mono.zip(vehicleMono, driverMono, agencyMono)
+                    .map(tuple -> new RentalDetailResponseDTO(
+                        rental,
+                        tuple.getT1(),
+                        tuple.getT2().orElse(null),
+                        tuple.getT3()
+                    ));
+            });
+    }
 
     @Transactional
     public Mono<RentalInitResponse> initiateRental(UUID clientId, RentalInitRequest request) {
@@ -109,7 +143,6 @@ public class RentalService {
                         return rentalRepository.save(rental)
                             .map(saved -> new RentalInitResponse(
                                 true,
-                                // Utilisation du template ici (juste pour le message de retour API, pas de notif DB encore)
                                 String.format(NotificationTemplate.RESERVATION_INIT_CLIENT.getTemplate(), totalFinal.multiply(BigDecimal.valueOf(0.6))),
                                 saved.getId(), totalFinal, deposit, commission, agencyMapper.toDto(agency)
                             ));
@@ -218,7 +251,6 @@ public class RentalService {
             });
     }
 
-    // --- LISTING METHODS (Inchangées) ---
     public Flux<RentalEntity> getClientActiveReservations(UUID clientId) {
         return rentalRepository.findAllByClientIdAndStatusIn(clientId, RESERVATION_ACTIVE_STATUSES);
     }

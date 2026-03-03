@@ -2,6 +2,7 @@ package com.project.apirental.modules.rental.api;
 
 import com.project.apirental.modules.rental.domain.RentalEntity;
 import com.project.apirental.modules.rental.dto.PaymentRequest;
+import com.project.apirental.modules.rental.dto.RentalDetailResponseDTO;
 import com.project.apirental.modules.rental.dto.RentalInitRequest;
 import com.project.apirental.modules.rental.dto.RentalInitResponse;
 import com.project.apirental.modules.rental.services.RentalPaymentService;
@@ -31,6 +32,16 @@ public class RentalController {
     private final RentalService rentalService;
     private final RentalPaymentService paymentService;
     private final UserRepository userRepository;
+
+    // =================================================================================
+    // DÉTAILS (Client & Agence/Org)
+    // =================================================================================
+
+    @Operation(summary = "Obtenir les détails complets d'une réservation ou location")
+    @GetMapping("/{id}/details")
+    public Mono<ResponseEntity<RentalDetailResponseDTO>> getRentalDetails(@PathVariable UUID id) {
+        return rentalService.getRentalDetails(id).map(ResponseEntity::ok);
+    }
 
     // =================================================================================
     // ACTIONS (Init, Pay, Start, End, Cancel)

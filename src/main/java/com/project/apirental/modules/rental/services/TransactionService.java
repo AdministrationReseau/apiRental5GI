@@ -1,5 +1,6 @@
 package com.project.apirental.modules.rental.services;
 
+import com.project.apirental.modules.rental.dto.TransactionDetailResponseDTO;
 import com.project.apirental.modules.rental.dto.TransactionResponseDTO;
 import com.project.apirental.modules.rental.repository.PaymentRepository;
 import com.project.apirental.modules.rental.repository.RentalRepository;
@@ -8,6 +9,7 @@ import com.project.apirental.modules.subscription.repository.SubscriptionReposit
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.util.Comparator;
 import java.util.UUID;
@@ -20,6 +22,50 @@ public class TransactionService {
     private final SubscriptionRepository subscriptionRepository;
     private final SubscriptionPlanRepository planRepository;
     private final RentalRepository rentalRepository;
+
+    // Injection du RentalService pour récupérer les détails de la location liée au paiement
+    private final RentalService rentalService;
+
+    // =================================================================================
+    // NOUVELLE MÉTHODE : Obtenir les détails complets d'une transaction
+    // =================================================================================
+    public Mono<TransactionDetailResponseDTO> getTransactionDetails(UUID transactionId) {
+        // 1. On cherche d'abord si c'est un paiement de location
+        Mono<TransactionDetailResponseDTO> paymentMono = paymentRepository.findById(transactionId)
+            .flatMap(payment -> rentalService.getRentalDetails(payment.getRentalId())
+                .map(rentalDetails -> new TransactionDetailResponseDTO(
+                    payment.getId(),
+                    "RENTAL_PAYMENT",
+                    payment.getAmount(),
+                    "Paiement Location #" + payment.getRentalId().toString().substring(0, 8),
+                    payment.getTransactionDate(),
+                    payment.getTransactionRef(),
+                    "COMPLETED",
+                    payment.getPaymentMethod(),
+                    rentalDetails,
+                    null
+                )));
+
+        // 2. Si ce n'est pas un paiement, on cherche si c'est un paiement d'abonnement
+        Mono<TransactionDetailResponseDTO> subMono = subscriptionRepository.findById(transactionId)
+            .flatMap(sub -> planRepository.findByName(sub.getPlanType())
+                .map(plan -> new TransactionDetailResponseDTO(
+                    sub.getId(),
+                    "SUBSCRIPTION_COST",
+                    plan.getPrice().negate(),
+                    "Abonnement " + plan.getName(),
+                    sub.getStartDate(),
+                    "SUB-" + sub.getId().toString().substring(0, 8),
+                    sub.getStatus(),
+                    null,
+                    null,
+                    plan
+                )));
+
+        // On retourne l'un ou l'autre, ou une erreur si introuvable
+        return paymentMono.switchIfEmpty(subMono)
+            .switchIfEmpty(Mono.error(new RuntimeException("Transaction non trouvée")));
+    }
 
     /**
      * Transactions d'un Client (Uniquement ses paiements de location)

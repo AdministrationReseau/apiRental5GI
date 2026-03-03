@@ -62,6 +62,7 @@ public class OpenApiConfig {
                         "/api/rentals/{id}/pay",
                         "/api/rentals/{id}/cancel",
                         "/api/rentals/{id}/end-signal",
+                        "/api/rentals/{id}/details",
                         "/api/rentals/client/**",
                         "/api/rentals/my-rentals",
 
@@ -69,6 +70,7 @@ public class OpenApiConfig {
                         "/api/notifications/client/**",
                         "/api/notifications/{id}/read",
                         "/api/transactions/client/**",
+                        "/api/transactions/{id}/details",
                         "/api/users/**"
                 )
                 .build();
@@ -88,13 +90,21 @@ public class OpenApiConfig {
                         "/api/vehicles/**",
                         "/api/drivers/**",
                         "/api/vehicles/categories/**",
+
+                        // --- Gestion des Locations ---
                         "/api/rentals/agency/**",
                         "/api/rentals/org/**",
                         "/api/rentals/{id}/start",
                         "/api/rentals/{id}/validate-return",
+                        "/api/rentals/{id}/details",
+
+                        // --- Suivi & Finances ---
                         "/api/stats/**",
                         "/api/transactions/org/**",
                         "/api/transactions/agency/**",
+                        "/api/transactions/{id}/details",
+
+                        // --- Communication ---
                         "/api/notifications/org/**",
                         "/api/notifications/agency/**",
                         "/api/notifications/{id}/read",

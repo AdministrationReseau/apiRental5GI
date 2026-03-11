@@ -22,7 +22,10 @@ public class RentalEntity implements Persistable<UUID> {
     private UUID id;
 
     private UUID clientId; // Nullable pour les walk-ins
-    private String clientName; // Nouveau : Pour les walk-ins ou cache du nom
+    private String clientName; // Pour les walk-ins
+    private String clientPhone;
+    private String clientEmail; // NOUVEAU
+    private String cniNumber;   // NOUVEAU
 
     private UUID agencyId;
     private UUID vehicleId;
@@ -38,8 +41,6 @@ public class RentalEntity implements Persistable<UUID> {
     private BigDecimal amountPaid;
     private BigDecimal commissionAmount;
     private BigDecimal depositAmount;
-
-    private String clientPhone;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

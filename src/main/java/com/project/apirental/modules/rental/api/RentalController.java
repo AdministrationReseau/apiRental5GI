@@ -1,6 +1,7 @@
 package com.project.apirental.modules.rental.api;
 
 import com.project.apirental.modules.rental.domain.RentalEntity;
+import com.project.apirental.modules.rental.dto.AgencyRentalRequest;
 import com.project.apirental.modules.rental.dto.PaymentRequest;
 import com.project.apirental.modules.rental.dto.RentalDetailResponseDTO;
 import com.project.apirental.modules.rental.dto.RentalInitRequest;
@@ -55,6 +56,16 @@ public class RentalController {
             .flatMap(userRepository::findByEmail)
             .flatMap(user -> rentalService.initiateRental(user.getId(), request))
             .map(ResponseEntity::ok);
+    }
+
+    @Operation(summary = "Créer une location par l'agence (Client Walk-in)")
+    @PostMapping("/agency/{agencyId}/create")
+    @PreAuthorize("hasRole('ORGANIZATION') or hasRole('STAFF')")
+    public Mono<ResponseEntity<RentalInitResponse>> createAgencyRental(
+            @PathVariable UUID agencyId,
+            @RequestBody @Valid AgencyRentalRequest request) {
+        return rentalService.createAgencyRental(agencyId, request)
+                .map(ResponseEntity::ok);
     }
 
     @Operation(summary = "Payer une réservation (60% ou solde)")

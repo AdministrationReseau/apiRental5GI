@@ -8,8 +8,10 @@ import java.util.UUID;
 public record AgencyRentalRequest(
     @NotNull String clientName,
     @NotNull String clientPhone,
+    String clientEmail, // Optionnel
+    String cniNumber,   // Optionnel
     @NotNull UUID vehicleId,
-    @NotNull UUID driverId,
+    UUID driverId,      // Optionnel
     @NotNull LocalDateTime startDate,
     @NotNull LocalDateTime endDate,
     @NotNull RentalType rentalType

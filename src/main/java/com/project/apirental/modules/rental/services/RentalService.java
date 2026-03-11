@@ -7,11 +7,10 @@ import com.project.apirental.modules.driver.services.DriverService;
 import com.project.apirental.modules.notification.domain.NotificationTemplate;
 import com.project.apirental.modules.notification.services.NotificationService;
 import com.project.apirental.modules.organization.repository.OrganizationRepository;
+import com.project.apirental.modules.pricing.domain.PricingEntity;
 import com.project.apirental.modules.pricing.services.PricingService;
 import com.project.apirental.modules.rental.domain.RentalEntity;
-import com.project.apirental.modules.rental.dto.RentalDetailResponseDTO;
-import com.project.apirental.modules.rental.dto.RentalInitRequest;
-import com.project.apirental.modules.rental.dto.RentalInitResponse;
+import com.project.apirental.modules.rental.dto.*;
 import com.project.apirental.modules.rental.repository.RentalRepository;
 import com.project.apirental.modules.schedule.services.ScheduleService;
 import com.project.apirental.modules.vehicle.repository.VehicleRepository;
@@ -44,38 +43,26 @@ public class RentalService {
     private final ScheduleService scheduleService;
     private final NotificationService notificationService;
     private final AgencyMapper agencyMapper;
-
-    // Nouveaux services injectés pour récupérer les détails
     private final VehicleService vehicleService;
     private final DriverService driverService;
 
+    // CORRECTION : PENDING est remis ici pour que le client puisse voir son "panier" et le payer
     private static final List<RentalStatus> RESERVATION_ACTIVE_STATUSES = Arrays.asList(RentalStatus.PENDING, RentalStatus.RESERVED, RentalStatus.PAID);
     private static final List<RentalStatus> RESERVATION_ALL_STATUSES = Arrays.asList(RentalStatus.PENDING, RentalStatus.RESERVED, RentalStatus.PAID, RentalStatus.CANCELLED);
     private static final List<RentalStatus> RENTAL_STATUSES = Arrays.asList(RentalStatus.ONGOING, RentalStatus.UNDER_REVIEW, RentalStatus.COMPLETED);
 
-    // =================================================================================
-    // NOUVELLE MÉTHODE : Obtenir les détails complets d'une location/réservation
-    // =================================================================================
     public Mono<RentalDetailResponseDTO> getRentalDetails(UUID rentalId) {
         return rentalRepository.findById(rentalId)
             .switchIfEmpty(Mono.error(new RuntimeException("Location ou Réservation non trouvée")))
             .flatMap(rental -> {
                 var vehicleMono = vehicleService.getVehicleById(rental.getVehicleId());
-
-                // Gestion sécurisée du chauffeur (qui peut être null)
                 var driverMono = rental.getDriverId() != null
                     ? driverService.getDriverById(rental.getDriverId()).map(Optional::of).defaultIfEmpty(Optional.empty())
                     : Mono.just(Optional.<DriverResponseDTO>empty());
-
                 var agencyMono = agencyRepository.findById(rental.getAgencyId()).map(agencyMapper::toDto);
 
                 return Mono.zip(vehicleMono, driverMono, agencyMono)
-                    .map(tuple -> new RentalDetailResponseDTO(
-                        rental,
-                        tuple.getT1(),
-                        tuple.getT2().orElse(null),
-                        tuple.getT3()
-                    ));
+                    .map(tuple -> new RentalDetailResponseDTO(rental, tuple.getT1(), tuple.getT2().orElse(null), tuple.getT3()));
             });
     }
 
@@ -95,7 +82,7 @@ public class RentalService {
                     if (!isDriverRequired && !hasDriverSelected) {
                         return agencyRepository.findById(vehicle.getAgencyId())
                             .map(agency -> new RentalInitResponse(
-                                false, "Veuillez contacter l'agence directement.", null, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, agencyMapper.toDto(agency)
+                                false, "Veuillez contacter l'agence directement pour une location sans chauffeur.", null, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, agencyMapper.toDto(agency)
                             ));
                     }
 
@@ -120,27 +107,45 @@ public class RentalService {
                         BigDecimal deposit = baseAmount.multiply(BigDecimal.valueOf(0.10));
                         BigDecimal totalFinal = baseAmount.add(commission).add(deposit);
 
-                        RentalEntity rental = RentalEntity.builder()
-                            .id(UUID.randomUUID())
-                            .clientId(clientId)
-                            .agencyId(vehicle.getAgencyId())
-                            .vehicleId(request.vehicleId())
-                            .driverId(request.driverId())
-                            .startDate(request.startDate())
-                            .endDate(request.endDate())
-                            .status(RentalStatus.PENDING)
-                            .rentalType(request.rentalType())
-                            .totalAmount(totalFinal)
-                            .amountPaid(BigDecimal.ZERO)
-                            .commissionAmount(commission)
-                            .depositAmount(deposit)
-                            .clientPhone(request.clientPhone())
-                            .createdAt(LocalDateTime.now())
-                            .updatedAt(LocalDateTime.now())
-                            .isNewRecord(true)
-                            .build();
+                        // SOLUTION ANTI-DOUBLON : On cherche si une réservation PENDING existe déjà
+                        return rentalRepository.findExistingPendingRental(clientId, request.vehicleId())
+                            .flatMap(existingRental -> {
+                                // Mise à jour de la réservation existante (Upsert)
+                                existingRental.setDriverId(request.driverId());
+                                existingRental.setStartDate(request.startDate());
+                                existingRental.setEndDate(request.endDate());
+                                existingRental.setRentalType(request.rentalType());
+                                existingRental.setTotalAmount(totalFinal);
+                                existingRental.setCommissionAmount(commission);
+                                existingRental.setDepositAmount(deposit);
+                                existingRental.setClientPhone(request.clientPhone());
+                                existingRental.setUpdatedAt(LocalDateTime.now());
 
-                        return rentalRepository.save(rental)
+                                return rentalRepository.save(existingRental);
+                            })
+                            .switchIfEmpty(Mono.defer(() -> {
+                                // Création d'une nouvelle réservation si aucune n'existe
+                                RentalEntity newRental = RentalEntity.builder()
+                                    .id(UUID.randomUUID())
+                                    .clientId(clientId)
+                                    .agencyId(vehicle.getAgencyId())
+                                    .vehicleId(request.vehicleId())
+                                    .driverId(request.driverId())
+                                    .startDate(request.startDate())
+                                    .endDate(request.endDate())
+                                    .status(RentalStatus.PENDING)
+                                    .rentalType(request.rentalType())
+                                    .totalAmount(totalFinal)
+                                    .amountPaid(BigDecimal.ZERO)
+                                    .commissionAmount(commission)
+                                    .depositAmount(deposit)
+                                    .clientPhone(request.clientPhone())
+                                    .createdAt(LocalDateTime.now())
+                                    .updatedAt(LocalDateTime.now())
+                                    .isNewRecord(true)
+                                    .build();
+                                return rentalRepository.save(newRental);
+                            }))
                             .map(saved -> new RentalInitResponse(
                                 true,
                                 String.format(NotificationTemplate.RESERVATION_INIT_CLIENT.getTemplate(), totalFinal.multiply(BigDecimal.valueOf(0.6))),
@@ -148,6 +153,65 @@ public class RentalService {
                             ));
                     });
                 }));
+    }
+
+    // Création directe par l'agence (Walk-in) avec les nouveaux champs
+    @Transactional
+    public Mono<RentalInitResponse> createAgencyRental(UUID agencyId, AgencyRentalRequest request) {
+        return vehicleRepository.findById(request.vehicleId())
+            .filter(v -> v.getAgencyId().equals(agencyId))
+            .switchIfEmpty(Mono.error(new RuntimeException("Véhicule non trouvé ou n'appartient pas à cette agence")))
+            .flatMap(vehicle -> Mono.zip(
+                pricingService.getPricing(ResourceType.VEHICLE, request.vehicleId()),
+                request.driverId() != null ? pricingService.getPricing(ResourceType.DRIVER, request.driverId()) : Mono.just(new PricingEntity()),
+                agencyRepository.findById(agencyId)
+            ).flatMap(tuple -> {
+                var vehiclePrice = tuple.getT1();
+                var driverPrice = tuple.getT2();
+                var agency = tuple.getT3();
+
+                long duration = (request.rentalType() == RentalType.DAILY)
+                    ? Math.max(1, Duration.between(request.startDate(), request.endDate()).toDays())
+                    : Math.max(1, Duration.between(request.startDate(), request.endDate()).toHours());
+
+                BigDecimal vPrice = (request.rentalType() == RentalType.DAILY) ? vehiclePrice.getPricePerDay() : vehiclePrice.getPricePerHour();
+                BigDecimal dPrice = (request.driverId() != null)
+                    ? ((request.rentalType() == RentalType.DAILY) ? driverPrice.getPricePerDay() : driverPrice.getPricePerHour())
+                    : BigDecimal.ZERO;
+
+                BigDecimal baseAmount = vPrice.add(dPrice).multiply(BigDecimal.valueOf(duration));
+                BigDecimal commission = baseAmount.multiply(BigDecimal.valueOf(0.01));
+                BigDecimal deposit = baseAmount.multiply(BigDecimal.valueOf(0.10));
+                BigDecimal totalFinal = baseAmount.add(commission).add(deposit);
+
+                RentalEntity rental = RentalEntity.builder()
+                    .id(UUID.randomUUID())
+                    .clientName(request.clientName())
+                    .clientPhone(request.clientPhone())
+                    .clientEmail(request.clientEmail()) // NOUVEAU
+                    .cniNumber(request.cniNumber())     // NOUVEAU
+                    .agencyId(agencyId)
+                    .vehicleId(request.vehicleId())
+                    .driverId(request.driverId())
+                    .startDate(request.startDate())
+                    .endDate(request.endDate())
+                    .status(RentalStatus.PENDING)
+                    .rentalType(request.rentalType())
+                    .totalAmount(totalFinal)
+                    .amountPaid(BigDecimal.ZERO)
+                    .commissionAmount(commission)
+                    .depositAmount(deposit)
+                    .createdAt(LocalDateTime.now())
+                    .updatedAt(LocalDateTime.now())
+                    .isNewRecord(true)
+                    .build();
+
+                return rentalRepository.save(rental)
+                    .map(saved -> new RentalInitResponse(
+                        true, "Location agence créée. Veuillez procéder à l'encaissement.",
+                        saved.getId(), totalFinal, deposit, commission, agencyMapper.toDto(agency)
+                    ));
+            }));
     }
 
     @Transactional
@@ -160,10 +224,10 @@ public class RentalService {
                 rental.setUpdatedAt(LocalDateTime.now());
                 return rentalRepository.save(rental)
                     .flatMap(saved -> Mono.when(
-                        notificationService.createNotification(
+                        saved.getClientId() != null ? notificationService.createNotification(
                             saved.getId(), saved.getClientId(), NotificationResourceType.CLIENT, NotificationReason.LOCATION_START,
                             saved.getVehicleId(), saved.getDriverId(), NotificationTemplate.LOCATION_START_CLIENT
-                        ),
+                        ) : Mono.empty(),
                         notificationService.createNotification(
                             saved.getId(), saved.getAgencyId(), NotificationResourceType.AGENCY, NotificationReason.LOCATION_START,
                             saved.getVehicleId(), saved.getDriverId(), NotificationTemplate.LOCATION_START_AGENCY
@@ -202,13 +266,13 @@ public class RentalService {
 
                 return Mono.when(
                     scheduleService.addUnavailability(rental.getAgencyId(), ResourceType.VEHICLE, rental.getVehicleId(), schedule),
-                    scheduleService.addUnavailability(rental.getAgencyId(), ResourceType.DRIVER, rental.getDriverId(), schedule)
+                    rental.getDriverId() != null ? scheduleService.addUnavailability(rental.getAgencyId(), ResourceType.DRIVER, rental.getDriverId(), schedule) : Mono.empty()
                 ).then(rentalRepository.save(rental))
                  .flatMap(saved -> Mono.when(
-                     notificationService.createNotification(
+                     saved.getClientId() != null ? notificationService.createNotification(
                          saved.getId(), saved.getClientId(), NotificationResourceType.CLIENT, NotificationReason.LOCATION_END,
                          saved.getVehicleId(), saved.getDriverId(), NotificationTemplate.LOCATION_END_VALIDATED_CLIENT
-                     ),
+                     ) : Mono.empty(),
                      notificationService.createNotification(
                          saved.getId(), saved.getAgencyId(), NotificationResourceType.AGENCY, NotificationReason.LOCATION_END,
                          saved.getVehicleId(), saved.getDriverId(), NotificationTemplate.LOCATION_END_VALIDATED_AGENCY
@@ -220,7 +284,7 @@ public class RentalService {
     @Transactional
     public Mono<RentalEntity> cancelRental(UUID rentalId) {
         return rentalRepository.findById(rentalId)
-            .filter(r -> r.getStatus() == RentalStatus.RESERVED || r.getStatus() == RentalStatus.PAID)
+            .filter(r -> r.getStatus() == RentalStatus.RESERVED || r.getStatus() == RentalStatus.PAID || r.getStatus() == RentalStatus.PENDING)
             .switchIfEmpty(Mono.error(new RuntimeException("Impossible d'annuler cette réservation.")))
             .flatMap(rental -> {
                 BigDecimal amountPaid = rental.getAmountPaid();
@@ -235,11 +299,11 @@ public class RentalService {
                 return rentalRepository.save(rental)
                     .flatMap(saved -> freeSchedule
                         .then(Mono.when(
-                            notificationService.createNotification(
+                            saved.getClientId() != null ? notificationService.createNotification(
                                 saved.getId(), saved.getClientId(), NotificationResourceType.CLIENT, NotificationReason.CANCELLATION,
                                 saved.getVehicleId(), saved.getDriverId(),
                                 NotificationTemplate.CANCELLATION_CLIENT, amountPaid, penalty, refundAmount
-                            ),
+                            ) : Mono.empty(),
                             notificationService.createNotification(
                                 saved.getId(), saved.getAgencyId(), NotificationResourceType.AGENCY, NotificationReason.CANCELLATION,
                                 saved.getVehicleId(), saved.getDriverId(),

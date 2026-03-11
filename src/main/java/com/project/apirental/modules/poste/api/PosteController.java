@@ -41,6 +41,13 @@ public class PosteController {
         return posteService.createPoste(orgId, request).map(ResponseEntity::ok);
     }
 
+    @Operation(summary = "Obtenir les détails et permissions d'un poste")
+    @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ORGANIZATION') or hasRole('AGENT')")
+    public Mono<ResponseEntity<PosteResponseDTO>> getById(@PathVariable UUID id) {
+        return posteService.getPosteById(id).map(ResponseEntity::ok);
+    }
+
     @Operation(summary = "Mettre à jour un poste")
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ORGANIZATION')")

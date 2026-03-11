@@ -2,8 +2,9 @@ package com.project.apirental.modules.driver.api;
 
 import com.project.apirental.modules.driver.dto.DriverResponseDTO;
 import com.project.apirental.modules.driver.services.DriverService;
+import com.project.apirental.modules.vehicle.dto.PricingUpdateDTO;
+import com.project.apirental.modules.vehicle.dto.ScheduleUpdateDTO;
 import com.project.apirental.modules.driver.dto.DriverDetailResponseDTO;
-import com.project.apirental.modules.driver.dto.UpdateDriverStatusDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -87,13 +88,22 @@ public class DriverController {
         return driverService.getDriverDetails(id).map(ResponseEntity::ok);
     }
 
-    @Operation(summary = "Mettre à jour statut, motif, planning et prix")
-    @PatchMapping("/{id}/status-pricing")
+    @Operation(summary = "Mettre à jour le prix du chauffeur")
+    @PutMapping("/{id}/pricing")
     @PreAuthorize("hasRole('ORGANIZATION')")
-    public Mono<ResponseEntity<DriverDetailResponseDTO>> updateStatusAndPricing(
+    public Mono<ResponseEntity<DriverDetailResponseDTO>> updatePricing(
             @PathVariable UUID id,
-            @RequestBody UpdateDriverStatusDTO request) {
-        return driverService.updateDriverStatusAndPricing(id, request).map(ResponseEntity::ok);
+            @RequestBody PricingUpdateDTO request) {
+        return driverService.updateDriverPricing(id, request).map(ResponseEntity::ok);
+    }
+
+    @Operation(summary = "Ajouter des indisponibilités (Planning) au chauffeur")
+    @PostMapping("/{id}/schedule")
+    @PreAuthorize("hasRole('ORGANIZATION') or hasRole('AGENT')")
+    public Mono<ResponseEntity<DriverDetailResponseDTO>> updateSchedule(
+            @PathVariable UUID id,
+            @RequestBody ScheduleUpdateDTO request) {
+        return driverService.updateDriverSchedules(id, request).map(ResponseEntity::ok);
     }
 
     @Operation(summary = "Changer l'agence d'un conducteur")

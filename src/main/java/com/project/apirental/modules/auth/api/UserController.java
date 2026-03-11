@@ -5,6 +5,8 @@ import com.project.apirental.modules.auth.dto.PasswordUpdateDTO;
 import com.project.apirental.modules.auth.dto.UserProfileUpdateDTO;
 import com.project.apirental.modules.auth.services.AuthService;
 import com.project.apirental.modules.auth.services.UserService;
+import com.project.apirental.modules.permission.domain.PermissionEntity;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -12,6 +14,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @RestController
@@ -38,5 +42,12 @@ public class UserController {
         return authService.getCurrentUser()
                 .flatMap(user -> userService.updatePassword(user.getId(), dto))
                 .then(Mono.just(ResponseEntity.ok("Mot de passe mis à jour avec succès")));
+    }
+
+    @Operation(summary = "Lister les permissions de l'utilisateur connecté")
+    @GetMapping("/me/permissions")
+    public Flux<PermissionEntity> getMyPermissions() {
+        return authService.getCurrentUser()
+                .flatMapMany(user -> userService.getUserPermissions(user.getId()));
     }
 }

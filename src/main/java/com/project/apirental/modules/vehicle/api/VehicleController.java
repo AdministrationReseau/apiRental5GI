@@ -6,7 +6,8 @@ import com.project.apirental.modules.vehicle.dto.VehicleRequestDTO;
 import com.project.apirental.modules.vehicle.dto.VehicleResponseDTO;
 import com.project.apirental.modules.vehicle.services.VehicleService;
 import com.project.apirental.modules.vehicle.dto.VehicleDetailResponseDTO;
-import com.project.apirental.modules.vehicle.dto.UpdateVehicleStatusDTO;
+import com.project.apirental.modules.vehicle.dto.PricingUpdateDTO;
+import com.project.apirental.modules.vehicle.dto.ScheduleUpdateDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -92,13 +93,22 @@ public class VehicleController {
         return vehicleService.getVehicleDetails(id).map(ResponseEntity::ok);
     }
 
-    @Operation(summary = "Mettre à jour statut (Maintenance/Indispo), planning et prix")
-    @PatchMapping("/{id}/status-pricing")
+    @Operation(summary = "Mettre à jour le prix de location du véhicule")
+    @PutMapping("/{id}/pricing")
     @PreAuthorize("hasRole('ORGANIZATION')")
-    public Mono<ResponseEntity<VehicleDetailResponseDTO>> updateStatusAndPricing(
+    public Mono<ResponseEntity<VehicleDetailResponseDTO>> updatePricing(
             @PathVariable UUID id,
-            @RequestBody UpdateVehicleStatusDTO request) {
-        return vehicleService.updateVehicleStatusAndPricing(id, request).map(ResponseEntity::ok);
+            @RequestBody PricingUpdateDTO request) {
+        return vehicleService.updateVehiclePricing(id, request).map(ResponseEntity::ok);
+    }
+
+    @Operation(summary = "Ajouter des indisponibilités (Planning) au véhicule")
+    @PostMapping("/{id}/schedule")
+    @PreAuthorize("hasRole('ORGANIZATION') or hasRole('AGENT')")
+    public Mono<ResponseEntity<VehicleDetailResponseDTO>> updateSchedule(
+            @PathVariable UUID id,
+            @RequestBody ScheduleUpdateDTO request) {
+        return vehicleService.updateVehicleSchedules(id, request).map(ResponseEntity::ok);
     }
 
     @Operation(summary = "Obtenir les détails d'un véhicule par son ID")

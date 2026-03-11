@@ -15,7 +15,8 @@ import com.project.apirental.modules.vehicle.mapper.VehicleMapper;
 import com.project.apirental.modules.vehicle.repository.CategoryRepository;
 import com.project.apirental.modules.vehicle.repository.VehicleRepository;
 import com.project.apirental.modules.vehicle.dto.VehicleDetailResponseDTO;
-import com.project.apirental.modules.vehicle.dto.UpdateVehicleStatusDTO;
+import com.project.apirental.modules.vehicle.dto.PricingUpdateDTO;
+import com.project.apirental.modules.vehicle.dto.ScheduleUpdateDTO;
 import com.project.apirental.modules.pricing.domain.PricingEntity;
 import com.project.apirental.modules.pricing.services.PricingService;
 import com.project.apirental.modules.schedule.services.ScheduleService;
@@ -143,26 +144,28 @@ public class VehicleService {
     }
 
     @Transactional
-    public Mono<VehicleDetailResponseDTO> updateVehicleStatusAndPricing(UUID id, UpdateVehicleStatusDTO request) {
-        return vehicleRepository.findById(Objects.requireNonNull(id))
-            .flatMap(vehicle -> {
-                if (request.globalStatus() != null) {
-                    vehicle.setStatut(request.globalStatus());
-                }
-                Mono<Void> pricingMono = Mono.empty();
-                if (request.pricePerHour() != null || request.pricePerDay() != null) {
-                    pricingMono = pricingService.setPricing(
-                        vehicle.getOrganizationId(), ResourceType.VEHICLE, vehicle.getId(), request.pricePerHour(), request.pricePerDay()
-                    ).then();
-                }
-                Mono<Void> scheduleMono = Mono.empty();
-                if (request.schedule() != null) {
-                    scheduleMono = scheduleService.addUnavailability(
-                        vehicle.getOrganizationId(), ResourceType.VEHICLE, vehicle.getId(), request.schedule()
-                    ).then();
-                }
-                return vehicleRepository.save(vehicle).then(pricingMono).then(scheduleMono).thenReturn(vehicle);
-            })
+    public Mono<VehicleDetailResponseDTO> updateVehiclePricing(UUID id, PricingUpdateDTO request) {
+        return vehicleRepository.findById(id)
+            .switchIfEmpty(Mono.error(new RuntimeException("Véhicule non trouvé")))
+            .flatMap(vehicle -> pricingService.setPricing(
+                    vehicle.getOrganizationId(), ResourceType.VEHICLE, vehicle.getId(),
+                    request.pricePerHour(), request.pricePerDay()
+                ).thenReturn(vehicle)
+            )
+            .flatMap(vehicle -> getVehicleDetails(vehicle.getId()));
+    }
+
+    @Transactional
+    public Mono<VehicleDetailResponseDTO> updateVehicleSchedules(UUID id, ScheduleUpdateDTO request) {
+        return vehicleRepository.findById(id)
+            .switchIfEmpty(Mono.error(new RuntimeException("Véhicule non trouvé")))
+            .flatMap(vehicle ->
+                Flux.fromIterable(request.schedules())
+                    .flatMap(schedule -> scheduleService.addUnavailability(
+                        vehicle.getOrganizationId(), ResourceType.VEHICLE, vehicle.getId(), schedule
+                    ))
+                    .then(Mono.just(vehicle))
+            )
             .flatMap(vehicle -> getVehicleDetails(vehicle.getId()));
     }
 

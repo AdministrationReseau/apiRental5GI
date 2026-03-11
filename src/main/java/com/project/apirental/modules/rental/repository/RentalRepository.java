@@ -13,21 +13,13 @@ import java.util.UUID;
 
 public interface RentalRepository extends R2dbcRepository<RentalEntity, UUID> {
 
-    // --- REQUETES DE BASE ---
     Flux<RentalEntity> findAllByAgencyId(UUID agencyId);
     Flux<RentalEntity> findAllByClientId(UUID clientId);
 
-    // --- FILTRES PAR LISTE DE STATUTS (Pour Client et Agence) ---
-
-    // Pour le Client
+    // Filtres par statuts
     Flux<RentalEntity> findAllByClientIdAndStatusIn(UUID clientId, List<RentalStatus> statuses);
-
-    // Pour l'Agence
     Flux<RentalEntity> findAllByAgencyIdAndStatusIn(UUID agencyId, List<RentalStatus> statuses);
 
-    // --- REQUETES ORGANISATION (Jointure avec Agencies) ---
-
-    // Récupérer les rentals d'une organisation filtrés par statuts
     @Query("""
         SELECT r.*
         FROM rentals r
@@ -38,9 +30,10 @@ public interface RentalRepository extends R2dbcRepository<RentalEntity, UUID> {
     """)
     Flux<RentalEntity> findAllByOrganizationIdAndStatusIn(UUID orgId, List<RentalStatus> statuses);
 
-    // --- UTILITAIRES ---
+    // NOUVEAU : Chercher une réservation PENDING existante pour éviter les doublons
+    @Query("SELECT * FROM rentals WHERE client_id = :clientId AND vehicle_id = :vehicleId AND status = 'PENDING' LIMIT 1")
+    Mono<RentalEntity> findExistingPendingRental(UUID clientId, UUID vehicleId);
 
-    // Pour vérifier les conflits de révision/maintenance
     @Query("SELECT COUNT(*) FROM rentals WHERE vehicle_id = :vehicleId AND start_date < :checkEnd AND end_date > :checkStart AND status NOT IN ('CANCELLED', 'COMPLETED')")
     Mono<Long> countConflictingRentals(UUID vehicleId, LocalDateTime checkStart, LocalDateTime checkEnd);
 }

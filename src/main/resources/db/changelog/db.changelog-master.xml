@@ -404,4 +404,14 @@
         </createTable>
     </changeSet>
 
+    <!-- ================================================================================== -->
+    <!-- 8. AJOUT DES CHAMPS CLIENT POUR WALK-IN DANS RENTALS                               -->
+    <!-- ================================================================================== -->
+    <changeSet id="08-add-client-details-to-rentals" author="brayanne">
+        <addColumn tableName="rentals">
+            <column name="client_email" type="VARCHAR(255)"/>
+            <column name="cni_number" type="VARCHAR(100)"/>
+        </addColumn>
+    </changeSet>
+
 </databaseChangeLog>

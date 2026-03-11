@@ -24,17 +24,17 @@ public class SecurityConfig {
                 .authorizeExchange(exchanges -> exchanges
                         .pathMatchers("/auth/**", "/swagger-ui.html", "/webjars/**", "/v3/api-docs/**").permitAll()
                         .pathMatchers(HttpMethod.PUT, "/api/subscriptions/plans/**").hasRole("ADMIN")
-                        // Endpoints publics supplémentaires demandés :
+                        // Endpoints publics
                         .pathMatchers(
                             "/api/vehicles/available",
-                            "/api/vehicles/search", // NOUVEAU
-                            "/api/vehicles/agency/*/available", // NOUVEAU
+                            "/api/vehicles/search",
+                            "/api/vehicles/agency/*/available",
                             "/uploads/**",
                             "/api/subscriptions/plans/**",
                             "/api/vehicles/categories/all",
                             "/api/agencies/all",
-                            "/api/agencies/search", // NOUVEAU
-                            "/api/agencies/*/details", // NOUVEAU
+                            "/api/agencies/search",
+                            "/api/agencies/*/details",
                             "/api/drivers/{id}/details",
                             "/api/vehicles/{id}/details",
                             "/api/vehicles/drivers/available",

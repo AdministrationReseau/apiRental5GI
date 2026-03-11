@@ -10,10 +10,11 @@ import com.project.apirental.modules.media.services.MediaService;
 import com.project.apirental.modules.organization.repository.OrganizationRepository;
 import com.project.apirental.modules.organization.services.OrganizationService;
 import com.project.apirental.modules.driver.dto.DriverDetailResponseDTO;
-import com.project.apirental.modules.driver.dto.UpdateDriverStatusDTO;
 import com.project.apirental.modules.pricing.domain.PricingEntity;
 import com.project.apirental.modules.pricing.services.PricingService;
 import com.project.apirental.modules.schedule.services.ScheduleService;
+import com.project.apirental.modules.vehicle.dto.PricingUpdateDTO;
+import com.project.apirental.modules.vehicle.dto.ScheduleUpdateDTO;
 import com.project.apirental.modules.review.services.ReviewService;
 import com.project.apirental.shared.enums.ResourceType;
 import com.project.apirental.shared.events.AuditEvent;
@@ -171,39 +172,28 @@ public class DriverService {
     }
 
     @Transactional
-    public Mono<DriverDetailResponseDTO> updateDriverStatusAndPricing(UUID id, UpdateDriverStatusDTO request) {
-        return driverRepository.findById(Objects.requireNonNull(id))
-            .flatMap(driver -> {
-                if (request.globalStatus() != null) {
-                    driver.setStatus(request.globalStatus());
-                }
+    public Mono<DriverDetailResponseDTO> updateDriverPricing(UUID id, PricingUpdateDTO request) {
+        return driverRepository.findById(id)
+            .switchIfEmpty(Mono.error(new RuntimeException("Chauffeur non trouvé")))
+            .flatMap(driver -> pricingService.setPricing(
+                    driver.getOrganizationId(), ResourceType.DRIVER, driver.getId(),
+                    request.pricePerHour(), request.pricePerDay()
+                ).thenReturn(driver)
+            )
+            .flatMap(driver -> getDriverDetails(driver.getId()));
+    }
 
-                Mono<Void> pricingMono = Mono.empty();
-                if (request.pricePerHour() != null || request.pricePerDay() != null) {
-                    pricingMono = pricingService.setPricing(
-                        driver.getOrganizationId(),
-                        ResourceType.DRIVER,
-                        driver.getId(),
-                        request.pricePerHour(),
-                        request.pricePerDay()
-                    ).then();
-                }
-
-                Mono<Void> scheduleMono = Mono.empty();
-                if (request.schedule() != null) {
-                    scheduleMono = scheduleService.addUnavailability(
-                        driver.getOrganizationId(),
-                        ResourceType.DRIVER,
-                        driver.getId(),
-                        request.schedule()
-                    ).then();
-                }
-
-                return driverRepository.save(driver)
-                    .then(pricingMono)
-                    .then(scheduleMono)
-                    .thenReturn(driver);
-            })
+    @Transactional
+    public Mono<DriverDetailResponseDTO> updateDriverSchedules(UUID id, ScheduleUpdateDTO request) {
+        return driverRepository.findById(id)
+            .switchIfEmpty(Mono.error(new RuntimeException("Chauffeur non trouvé")))
+            .flatMap(driver ->
+                Flux.fromIterable(request.schedules())
+                    .flatMap(schedule -> scheduleService.addUnavailability(
+                        driver.getOrganizationId(), ResourceType.DRIVER, driver.getId(), schedule
+                    ))
+                    .then(Mono.just(driver))
+            )
             .flatMap(driver -> getDriverDetails(driver.getId()));
     }
 
